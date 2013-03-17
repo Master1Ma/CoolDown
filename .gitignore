@@ -11,3 +11,7 @@
 *.lai
 *.la
 *.a
+
+# Protobuf auto generated
+*.pb.h
+*.pb.cc
