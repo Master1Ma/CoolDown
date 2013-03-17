@@ -1,4 +1,0 @@
-message NetPackHeader{
-    optional int32 payloadType = 1;
-    optional int32 payloadLength = 2;
-}
