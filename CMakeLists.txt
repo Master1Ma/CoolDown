@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 2.6)
 PROJECT( POCOTEST )
-set(CMAKE_CXX_COMPILER "clang++") 
+SET(CMAKE_CXX_COMPILER "clang++") 
 SET( DIR_OUTPUT output )
 #set( CMAKE_BUILD_TYPE "release" )
 file(MAKE_DIRECTORY ${CMAKE_BINARY_DIR}/${DIR_OUTPUT})
 SET( BIN_NAME ${DIR_OUTPUT}/test )
 INCLUDE_DIRECTORIES( include )
 
-
+#recompile the proto files and link it to include & src 
 SET( protoc.cmd "protoc")
 SET( protoc.arg "-I=${CMAKE_SOURCE_DIR}/proto")
 SET( protoc.arg2 "--cpp_out=${CMAKE_SOURCE_DIR}/proto" )
