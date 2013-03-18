@@ -37,25 +37,25 @@ using Poco::Data::Session;
 
 using std::exception;
 
+
 class Tracker: public Poco::Util::ServerApplication
 {
 public:
 	Tracker();
 	~Tracker();
 
-    //maybe not thread-safe?
     Session& session(){
        return *pSession;
-   };
+    };
+
+    /*
+    retcode_t update_user_info(const string& nodeId, SharedPtr<NodeInfo> pInfo);
+    retcode_t find_user_info();
+    */
 
 protected:
 	void initialize(Application& self);
 	void uninitialize();
-
-	void defineOptions(OptionSet& options);
-	void handleOption(const std::string& name, const std::string& value);
-
-	void displayHelp();
 
 	int main(const std::vector<std::string>& args);
 
@@ -63,7 +63,6 @@ protected:
 private:
     int init_db_tables();
     Poco::Data::Session* pSession;
-	bool _helpRequested;
 };
 
 

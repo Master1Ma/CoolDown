@@ -8,6 +8,7 @@
 #include <Poco/Types.h>
 #include <Poco/Buffer.h>
 #include "netpack_header.pb.h"
+#include "error_code.h"
 
 using std::string;
 using Poco::Net::StreamSocket;
@@ -22,8 +23,8 @@ class NetPack{
         NetPack();
         NetPack(int payloadType, const string& payload);
 
-        int sendBy(SockType& sock) const;
-        int receiveFrom(SockType& sock);
+        retcode_t sendBy(SockType& sock) const;
+        retcode_t receiveFrom(SockType& sock);
 
 
         void clear(){
@@ -53,8 +54,8 @@ class NetPack{
         }
 
     private:
-        int sendHeaderLength(SockType& sock) const;
-        int receiveHeaderLength(SockType& sock, Int32* headerLength);
+        retcode_t sendHeaderLength(SockType& sock) const;
+        retcode_t receiveHeaderLength(SockType& sock, Int32* headerLength);
 
         int payloadType_;
         string payload_;
