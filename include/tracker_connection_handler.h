@@ -17,6 +17,8 @@ using Poco::NObserver;
 using Poco::AutoPtr;
 using Poco::Data::Session;
 
+class Tracker;
+
 class TrackerConnectionHandler
 {
     public:
@@ -33,5 +35,6 @@ class TrackerConnectionHandler
         SocketReactor& reactor_;
         Logger& logger_;
         Session& session_;
+        Tracker& app_;
 };
 #endif

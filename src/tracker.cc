@@ -38,13 +38,13 @@ using Poco::Data::Session;
 
 using std::exception;
 
-Tracker::Tracker(): _helpRequested(false)
-	{
-	}
+Tracker::Tracker()
+{
+}
 	
 Tracker::~Tracker()
-	{
-	}
+{
+}
 
 void Tracker::initialize(Application& self)
 {
@@ -58,68 +58,33 @@ void Tracker::uninitialize()
     ServerApplication::uninitialize();
 }
 
-void Tracker::defineOptions(OptionSet& options)
-{
-    ServerApplication::defineOptions(options);
-
-    options.addOption(
-        Option("help", "h", "display help information on command line arguments")
-            .required(false)
-            .repeatable(false));
-}
-
-void Tracker::handleOption(const std::string& name, const std::string& value)
-{
-    poco_notice_f2(logger(), "option : %s=%s", name, value);
-    ServerApplication::handleOption(name, value);
-
-    if (name == "help")
-        _helpRequested = true;
-}
-
-void Tracker::displayHelp()
-{
-    HelpFormatter helpFormatter(options());
-    helpFormatter.setCommand(commandName());
-    helpFormatter.setUsage("OPTIONS");
-    helpFormatter.setHeader("An echo server implemented using the Reactor and Acceptor patterns.");
-    helpFormatter.format(std::cout);
-}
-
 int Tracker::main(const std::vector<std::string>& args)
 {
     try{
-        if (_helpRequested)
-        {
-            displayHelp();
+        if( init_db_tables() ){
+            return Application::EXIT_CANTCREAT;
         }
-        else
-        {
-            if( init_db_tables() ){
-                return Application::EXIT_CANTCREAT;
-            }
 
-            unsigned short port = (unsigned short) config().getInt("EchoServer.port", 9977);
+        unsigned short port = (unsigned short) config().getInt("TrackerServer.port", 9977);
 
-            ServerSocket svs(port);
-            SocketReactor reactor;
-            SocketAcceptor<TrackerConnectionHandler> acceptor(svs, reactor);
+        ServerSocket svs(port);
+        SocketReactor reactor;
+        SocketAcceptor<TrackerConnectionHandler> acceptor(svs, reactor);
 
-            Thread thread;
-            thread.start(reactor);
+        Thread thread;
+        thread.start(reactor);
 
-            waitForTerminationRequest();
+        waitForTerminationRequest();
 
-            reactor.stop();
-            thread.join();
-        }
+        reactor.stop();
+        thread.join();
+
     }catch(exception& e){
         std::cout << e.what() << std::endl;
     }
     return Application::EXIT_OK;
 }
 
-//maybe not thread-safe?
 int Tracker::init_db_tables(){
 
     using namespace Poco::Data;
@@ -136,12 +101,12 @@ int Tracker::init_db_tables(){
         if( NULL == pSession ){
             throw std::runtime_error("Cannot make new session!");
         }
+
         Session& session = *pSession;
         session << "CREATE TABLE IF NOT EXISTS " << nodeInfoTableName << "("
                    "NodeId VARCHAR(40) PRIMARY KEY,"
                    "LastLoginIp VARCHAR(40),"
-                   "MessagePort INTEGER,"
-                   "IsOnline INTEGER"
+                   "MessagePort INTEGER"
                    ");", now;
 
         session << "CREATE TABLE IF NOT EXISTS " << fileOwnerTableName << "("
@@ -151,10 +116,15 @@ int Tracker::init_db_tables(){
                    ");", now;
 
     }catch(exception& e){
-        logger().error( e.what() );
+        poco_error_f1(logger(), "Got exception while init db : %s", e.what() );
         ret = -1;
     }
 
     return ret;
+}
+
+int main(int argc, char* argv[]){
+    Tracker tracker;
+    return tracker.run(argc, argv);
 }
 
