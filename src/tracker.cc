@@ -18,7 +18,6 @@
 #include "Poco/Data/Session.h"
 #include "Poco/Data/SQLite/Connector.h"
 
-
 using Poco::Logger;
 using Poco::Net::SocketReactor;
 using Poco::Net::SocketAcceptor;
@@ -85,6 +84,37 @@ int Tracker::main(const std::vector<std::string>& args)
     return Application::EXIT_OK;
 }
 
+retcode_t Tracker::AddOnlineUser(const string& clientId, ClientPtr peer){
+    if( clientMap_.end() != clientMap_.find(clientId) ){
+        return ERROR_CLIENT_ALREADY_EXISTS;
+    }
+
+    FastMutex::ScopedLock lock( clientMapMutex_ );
+    clientMap_[clientId] = peer;
+    return ERROR_OK;
+}
+
+retcode_t Tracker::RemoveOnlineUser(const string& clientId){
+    if( clientMap_.end() == clientMap_.find(clientId) ){
+        return ERROR_CLIENT_NOT_FOUND;
+    }
+    FastMutex::ScopedLock lock( clientMapMutex_ );
+    clientMap_.erase(clientId);
+    return ERROR_OK;
+}
+
+retcode_t Tracker::RequestClients(const string& fileId, uint16_t percentage, 
+        const ClientIdCollection& ownedClientIdList, ClientIdCollection& clients){
+    return ERROR_OK;
+}
+
+retcode_t Tracker::ReportPercentage(const string& clientId, uint16_t percentage){
+    return ERROR_OK;
+}
+retcode_t Tracker::PublishResource(const string& clientId, const string& fileId){
+    return ERROR_OK;
+}
+
 int Tracker::init_db_tables(){
 
     using namespace Poco::Data;
@@ -94,7 +124,7 @@ int Tracker::init_db_tables(){
         Poco::Data::SQLite::Connector::registerConnector();
 
         string dbFilename = config().getString("Database.Filename", "tracker.db");
-        string nodeInfoTableName = config().getString("Database.NodeInfo.TableName", "NodeInfo");
+        string clientInfoTableName = config().getString("Database.ClientInfo.TableName", "ClientInfo");
         string fileOwnerTableName = config().getString("Database.FileOwner.TableName", "FileOwner");
 
         pSession = new Session("SQLite", dbFilename);
@@ -103,16 +133,19 @@ int Tracker::init_db_tables(){
         }
 
         Session& session = *pSession;
-        session << "CREATE TABLE IF NOT EXISTS " << nodeInfoTableName << "("
-                   "NodeId VARCHAR(40) PRIMARY KEY,"
-                   "LastLoginIp VARCHAR(40),"
-                   "MessagePort INTEGER"
+        session << "CREATE TABLE IF NOT EXISTS " << clientInfoTableName << "("
+                   "ClientId VARCHAR(40) PRIMARY KEY,"
+                   "UploadTotal VARCHAR(20),"
+                   "DownloadTotal VARCHAR(20),"
+                   "CreateTime VARCHAR(40),"
+                   "LastLoginTime VARCHAR(40)"
                    ");", now;
 
         session << "CREATE TABLE IF NOT EXISTS " << fileOwnerTableName << "("
-                   "id integer PRIMARY KEY autoincrement,"
+                   "id INTEGER PRIMARY KEY autoincrement,"
                    "FileId VARCHAR(40),"
-                   "NodeId VARCHAR(40)"
+                   "NodeId VARCHAR(40),"
+                   "Percentage INTEGER"
                    ");", now;
 
     }catch(exception& e){

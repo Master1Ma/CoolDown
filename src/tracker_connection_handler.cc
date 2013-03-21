@@ -1,6 +1,7 @@
 #include "tracker_connection_handler.h"
 #include "netpack.h"
 #include "tracker.h"
+#include "payload_type.h"
 #include <Poco/Util/Application.h>
 
 using Poco::Util::Application;
@@ -48,6 +49,8 @@ void TrackerConnectionHandler::onReadable(const AutoPtr<ReadableNotification>& p
 
     poco_notice_f1(logger_, "header : \n%s", pack.debug_string() );
 
+    this->Process(pack, &retMsg);
+
     ret = retMsg.sendBy( sock_ );
     if( ret ){
         poco_warning_f2( logger_, "pack.sendBy error ! ret : %d, remote addr : %s.", 
@@ -64,4 +67,22 @@ void TrackerConnectionHandler::onShutdown(const AutoPtr<ShutdownNotification>& p
 {
     poco_information_f1(logger_, "shutdown connection from %s.", sock_.peerAddress().toString());
     delete this;
+}
+
+void TrackerConnectionHandler::Process(const NetPack& in, NetPack* out){
+    switch( in.payloadtype() ){
+        case PAYLOAD_LOGIN: 
+             break;
+        case PAYLOAD_LOGOUT: 
+             break;
+        case PAYLOAD_REQUEST_PEER:
+             break;
+        case PAYLOAD_REPORT_PERCENTAGE:
+             break;
+        case PAYLOAD_PUBLISH_RESOURCE:
+             break;
+        default:
+             poco_warning_f2(logger_, "Unknown PayloadType : %d , remote addr : %s.", in.payloadtype(), sock_.peerAddress().toString() );
+             break;
+    }
 }

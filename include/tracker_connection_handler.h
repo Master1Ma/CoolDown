@@ -18,6 +18,7 @@ using Poco::AutoPtr;
 using Poco::Data::Session;
 
 class Tracker;
+class NetPack;
 
 class TrackerConnectionHandler
 {
@@ -27,6 +28,8 @@ class TrackerConnectionHandler
 
         void onReadable(const AutoPtr<ReadableNotification>& pNotification);
         void onShutdown(const AutoPtr<ShutdownNotification>& pNotification);
+
+        void Process(const NetPack& in, NetPack* out);
 
     private:
         const static size_t BUF_LEN = 1 << 10;
