@@ -3,6 +3,7 @@
 #include "tracker.h"
 #include "payload_type.h"
 #include <Poco/Util/Application.h>
+#include <Poco/Logger.h>
 
 using Poco::Util::Application;
 
@@ -87,20 +88,18 @@ void TrackerConnectionHandler::Process(const NetPack& in, NetPack* out){
     }
 }
 
-retcode_t TrackerConnectionHandler::HandleLogin(const string& in, NetPack* out){
+retcode_t TrackerConnectionHandler::HandleLogin(const NetPack& in, NetPack* out){
     const static string PROTONAME("TrackerProto.Login");
     Message* pMessage = NULL;
     retcode_t ret = ERROR_OK;
-    ret = ParseProto(PROTONAME, pMessage);
-    if( ERROR_OK != ret ){
-        return ret;
-    }
+    ParseProto(PROTONAME, pMessage);
+
     if( !pMessage ){
         return ERROR_PROTO_PARSE_ERROR;
     }
 
     Login* loginProto = dynamic_cast<Login*>( pMessage );
-    if( !loginProto ){
+    if( !loginProto || !loginProto->ParseFromString(in.payload()) ){
         return ERROR_PROTO_PARSE_ERROR;
     }
 
@@ -108,29 +107,38 @@ retcode_t TrackerConnectionHandler::HandleLogin(const string& in, NetPack* out){
    
     string ip = msg->has_loginip() ? msg->loginip() : sock_.peerAddress().toString();
     Tracker::ClientPtr client( new ClientInfo(msg->clientid(), ip, msg->messageport()) );
-    ret = app_.AddOnlineUser(msg->ClientId(), client);
+    ret = app_.AddOnlineUser(msg->clientid(), client);
     if( ret != ERROR_OK ){
-        poco_warning_f1("Cannot add online user, client id : %s, client ip : %s, retCode : %d.", 
+        poco_warning_f3(logger_,"Cannot add online user, client id : %s, client ip : %s, retCode : %d.", 
                 msg->clientid(), ip, ret);
         return ret;
     }
     return ret;
 }
-retcode_t TrackerConnectionHandler::HandleLogOut(const string& in, NetPack* out);
-retcode_t TrackerConnectionHandler::HandleRequestPeer(const string& in, NetPack* out);
-retcode_t TrackerConnectionHandler::HandleReportProgress(const string& in, NetPack* out);
-retcode_t TrackerConnectionHandler::HandlePublishResource(const string& in, NetPack* out);
+retcode_t TrackerConnectionHandler::HandleLogOut(const NetPack& in, NetPack* out){
+    return ERROR_OK;
+}
+retcode_t TrackerConnectionHandler::HandleRequestPeer(const NetPack& in, NetPack* out){
+    return ERROR_OK;
+}
+retcode_t TrackerConnectionHandler::HandleReportProgress(const NetPack& in, NetPack* out){
+    return ERROR_OK;
+}
+retcode_t TrackerConnectionHandler::HandlePublishResource(const NetPack& in, NetPack* out){
+    return ERROR_OK;
+}
 
 retcode_t TrackerConnectionHandler::ParseProto(const string& name, Message* &proto){
-    message = NULL;
+    using namespace google::protobuf;
+    proto = NULL;
     const Descriptor* descriptor = DescriptorPool::generated_pool()->FindMessageTypeByName(name);
     if (descriptor)
     {
         const Message* prototype = MessageFactory::generated_factory()->GetPrototype(descriptor);
         if (prototype)
         {
-          message = prototype->New();
+          proto = prototype->New();
         }
     }
-    return message;
+    return ERROR_OK;
 }

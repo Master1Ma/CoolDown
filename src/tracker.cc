@@ -103,12 +103,12 @@ retcode_t Tracker::RemoveOnlineUser(const string& clientId){
     return ERROR_OK;
 }
 
-retcode_t Tracker::RequestClients(const string& fileId, uint16_t percentage, 
+retcode_t Tracker::RequestClients(const string& fileId, int percentage, int needCount,
         const ClientIdCollection& ownedClientIdList, ClientIdCollection* clients){
     return ERROR_OK;
 }
 
-retcode_t Tracker::ReportPercentage(const string& clientId, uint16_t percentage){
+retcode_t Tracker::ReportProgress(const string& fileId, const string& clientId, int percentage){
     return ERROR_OK;
 }
 retcode_t Tracker::PublishResource(const string& clientId, const string& fileId){

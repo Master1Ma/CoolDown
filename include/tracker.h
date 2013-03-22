@@ -76,7 +76,7 @@ public:
     retcode_t RequestClients(const string& fileId, int percentage, int needCount,
             const ClientIdCollection& ownedClientIdList, ClientIdCollection* clients);
 
-    retcode_t ReportPercentage(const string& fileId, const string& clientId, int percentage);
+    retcode_t ReportProgress(const string& fileId, const string& clientId, int percentage);
     retcode_t PublishResource(const string& clientId, const string& fileId);
 
 protected:
