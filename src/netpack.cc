@@ -14,11 +14,15 @@ NetPack::NetPack()
          headerLengthBuf_(sizeof(Int32)){
 }
 
-NetPack::NetPack(int payloadType, const string& payload)
+NetPack::NetPack(int payloadType, const Message& msg)
         :payloadType_(payloadType),
-        payload_(payload),
         logger_(Application::instance().logger()),
-        headerLengthBuf_(sizeof(Int32)){
+        headerLengthBuf_(sizeof(Int32)),
+        messageName_( msg.GetDescriptor()->full_name() ){
+
+        if( false == msg.SerializeToString(&this->payload_) ){
+            poco_error_f1(logger_, "Cannot serialize message to string, name : %s.", messageName_);
+        }
 
         header_.set_payloadtype(payloadType_);
         header_.set_payloadlength( payload_.length() );
@@ -79,9 +83,39 @@ retcode_t NetPack::receiveFrom(NetPack::SockType& sock){
 
     payload_.assign(buf.begin(), buf.size() );
     this->payloadType_ = header_.payloadtype();
-return ERROR_OK;
+    return ERROR_OK;
 }
 
+SharedPtr<Message> NetPack::message() const{
+
+    using namespace google::protobuf;
+    Message* message = NULL;
+    const Descriptor* descriptor = DescriptorPool::generated_pool()->FindMessageTypeByName(this->messageName_);
+    if (descriptor)
+    {
+        const Message* prototype = MessageFactory::generated_factory()->GetPrototype(descriptor);
+        if (prototype)
+        {
+            message = prototype->New();
+        }
+    }
+    return SharedPtr<Message>(message);
+}
+
+void NetPack::set_message(int payloadType, const Message& msg){
+    this->clear();
+    this->payloadType_ = payloadType;
+    this->messageName_ = msg.GetDescriptor()->full_name();
+
+    if( false == msg.SerializeToString( &this->payload_ ) ){
+            poco_error_f1(logger_, "Cannot serialize message to string, name : %s.", messageName_);
+    }
+
+    this->header_.set_payloadtype( payloadType );
+    this->header_.set_payloadlength( this->payload_.length() );
+    this->header_.set_messagename( this->messageName_ );
+
+}
 
 retcode_t NetPack::sendHeaderLength(SockType& sock) const{
     Int32 headerLength = Poco::ByteOrder::toNetwork( header_.ByteSize() );

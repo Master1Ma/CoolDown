@@ -2,13 +2,15 @@
 #define NETPACK_H
 #include <string>
 
+#include "netpack_header.pb.h"
+#include "error_code.h"
 #include <Poco/Net/StreamSocket.h>
 #include <Poco/Logger.h>
 #include <Poco/Format.h>
 #include <Poco/Types.h>
 #include <Poco/Buffer.h>
-#include "netpack_header.pb.h"
-#include "error_code.h"
+#include <Poco/SharedPtr.h>
+#include <google/protobuf/message.h>
 
 using std::string;
 using Poco::Net::StreamSocket;
@@ -16,19 +18,24 @@ using Poco::Logger;
 using Poco::format;
 using Poco::Int32;
 using Poco::Buffer;
+using Poco::SharedPtr;
+using google::protobuf::Message;
 
 class NetPack{
     public:
         typedef StreamSocket SockType;
         NetPack();
-        NetPack(int payloadType, const string& payload);
+        NetPack(int payloadType, const Message& msg);
 
         retcode_t sendBy(SockType& sock) const;
         retcode_t receiveFrom(SockType& sock);
 
+        SharedPtr<Message> message() const;
+        void set_message(int payloadType, const Message& msg);
 
         void clear(){
             this->payloadType_ = 0;
+            this->messageName_.clear();
             this->payload_.clear();
             this->header_.Clear();
         };
@@ -49,8 +56,13 @@ class NetPack{
             return this->payload_;
         };
 
+        string messageName() const{
+            return this->messageName_;
+        }
+
         string debug_string() const{
-            return format("type : %d\nlength : %d\npayload : %s", this->payloadType_, header_.payloadlength(), this->payload_);
+            return format("type : %d\nname : %s\nlength : %d\npayload : %s", this->payloadType_, this->messageName_, 
+                    header_.payloadlength(), this->payload_);
         }
 
     private:
@@ -59,6 +71,7 @@ class NetPack{
 
         int payloadType_;
         string payload_;
+        string messageName_;
         Buffer<char> headerLengthBuf_;
 
         NetPackHeader header_;

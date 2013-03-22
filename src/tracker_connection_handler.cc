@@ -38,7 +38,7 @@ void TrackerConnectionHandler::onReadable(const AutoPtr<ReadableNotification>& p
 {
 
     NetPack pack;
-    NetPack retMsg(1, "msg from server.");
+    NetPack retMsg;
 
     int ret = pack.receiveFrom( sock_ );
 
@@ -71,24 +71,35 @@ void TrackerConnectionHandler::onShutdown(const AutoPtr<ShutdownNotification>& p
 }
 
 void TrackerConnectionHandler::Process(const NetPack& in, NetPack* out){
-    //SharedPtr<Message> m = in.get_message();
+    SharedPtr<Message> m = in.message();
     MessageReply mr;
     QueryPeerReply qpr;
 
     switch( in.payloadtype() ){
         case PAYLOAD_LOGIN: 
+            this->HandleLogin(m, &mr);
              break;
         case PAYLOAD_LOGOUT: 
+            this->HandleLogOut(m, &mr);
              break;
         case PAYLOAD_REQUEST_PEER:
+             this->HandleRequestPeer(m, &qpr);
              break;
-    case PAYLOAD_REPORT_PROGRESS:
+        case PAYLOAD_REPORT_PROGRESS:
+            this->HandleReportProgress(m, &mr);
              break;
         case PAYLOAD_PUBLISH_RESOURCE:
+            this->HandlePublishResource(m, &mr);
              break;
         default:
              poco_warning_f2(logger_, "Unknown PayloadType : %d , remote addr : %s.", in.payloadtype(), sock_.peerAddress().toString() );
              break;
+    }
+
+    if( in.payloadtype() != PAYLOAD_REQUEST_PEER ){
+        out->set_message( PAYLOAD_MESSAGE_REPLY, mr );
+    }else{
+        out->set_message( PAYLOAD_REQUEST_PEER_REPLAY, qpr);
     }
 }
 

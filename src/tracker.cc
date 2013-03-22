@@ -111,6 +111,7 @@ retcode_t Tracker::RequestClients(const string& fileId, int percentage, int need
 retcode_t Tracker::ReportProgress(const string& clientId, const string& fileId, int percentage){
     return ERROR_OK;
 }
+
 retcode_t Tracker::PublishResource(const string& clientId, const string& fileId){
     return ERROR_OK;
 }
