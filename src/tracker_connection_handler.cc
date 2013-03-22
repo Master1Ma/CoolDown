@@ -71,6 +71,10 @@ void TrackerConnectionHandler::onShutdown(const AutoPtr<ShutdownNotification>& p
 }
 
 void TrackerConnectionHandler::Process(const NetPack& in, NetPack* out){
+    //SharedPtr<Message> m = in.get_message();
+    MessageReply mr;
+    QueryPeerReply qpr;
+
     switch( in.payloadtype() ){
         case PAYLOAD_LOGIN: 
              break;
@@ -88,43 +92,115 @@ void TrackerConnectionHandler::Process(const NetPack& in, NetPack* out){
     }
 }
 
-retcode_t TrackerConnectionHandler::HandleLogin(const NetPack& in, NetPack* out){
-    const static string PROTONAME("TrackerProto.Login");
-    Message* pMessage = NULL;
-    retcode_t ret = ERROR_OK;
-    ParseProto(PROTONAME, pMessage);
+retcode_t TrackerConnectionHandler::HandleLogin(SharedPtr<Message> in, MessageReply* out){
+    SharedPtr<Login> loginProto = in.cast<Login>();
+    retcode_t ret = ERROR_UNKNOWN;
+    out->set_returncode(ERROR_UNKNOWN);
 
-    if( !pMessage ){
-        return ERROR_PROTO_PARSE_ERROR;
+    if( loginProto.isNull() ){
+        return ERROR_PROTO_TYPE_ERROR;
     }
 
-    Login* loginProto = dynamic_cast<Login*>( pMessage );
-    if( !loginProto || !loginProto->ParseFromString(in.payload()) ){
-        return ERROR_PROTO_PARSE_ERROR;
-    }
+    string ip = loginProto->has_loginip() ? loginProto->loginip() : sock_.peerAddress().toString();
+    Tracker::ClientPtr client( new ClientInfo(loginProto->clientid(), ip, loginProto->messageport()) );
+    ret = app_.AddOnlineUser(loginProto->clientid(), client);
 
-    SharedPtr<Login> msg( loginProto );
-   
-    string ip = msg->has_loginip() ? msg->loginip() : sock_.peerAddress().toString();
-    Tracker::ClientPtr client( new ClientInfo(msg->clientid(), ip, msg->messageport()) );
-    ret = app_.AddOnlineUser(msg->clientid(), client);
     if( ret != ERROR_OK ){
         poco_warning_f3(logger_,"Cannot add online user, client id : %s, client ip : %s, retCode : %d.", 
-                msg->clientid(), ip, ret);
+                loginProto->clientid(), ip, ret);
         return ret;
     }
-    return ret;
-}
-retcode_t TrackerConnectionHandler::HandleLogOut(const NetPack& in, NetPack* out){
+
+    out->set_returncode(ERROR_OK);
     return ERROR_OK;
 }
-retcode_t TrackerConnectionHandler::HandleRequestPeer(const NetPack& in, NetPack* out){
+
+retcode_t TrackerConnectionHandler::HandleLogOut(SharedPtr<Message> in, MessageReply* out){
+    SharedPtr<Logout> logoutProto = in.cast<Logout>();
+    retcode_t ret = ERROR_UNKNOWN;
+    out->set_returncode(ERROR_UNKNOWN);
+
+    if( logoutProto.isNull() ){
+        return ERROR_PROTO_TYPE_ERROR;
+    }
+    ret = app_.RemoveOnlineUser(logoutProto->clientid());
+    if( ret != ERROR_OK ){
+        poco_warning_f3(logger_,"Cannot remove online user, client id : %s, client ip : %s, retCode : %d.", 
+                logoutProto->clientid(), sock_.peerAddress().toString(), ret);
+        return ret;
+    }
     return ERROR_OK;
 }
-retcode_t TrackerConnectionHandler::HandleReportProgress(const NetPack& in, NetPack* out){
+
+retcode_t TrackerConnectionHandler::HandleRequestPeer(SharedPtr<Message> in, QueryPeerReply* out){
+SharedPtr<QueryPeer> queryProto = in.cast<QueryPeer>();
+    retcode_t ret = ERROR_UNKNOWN;
+
+    if( queryProto.isNull() ){
+        return ERROR_PROTO_TYPE_ERROR;
+    }
+
+    out->set_fileid( queryProto->fileid() );
+
+    Tracker::ClientIdCollection idCollection( queryProto->ownedclients().begin(), queryProto->ownedclients().end() );
+    Tracker::ClientFileInfoCollection fileInfoCollection;
+
+    ret = app_.RequestClients(queryProto->fileid(), queryProto->percentage(), queryProto->needcount(), 
+            idCollection, &fileInfoCollection); 
+    if( ret != ERROR_OK ){
+        out->set_count(-1);
+        poco_warning_f4(logger_,"Cannot request clients, file id : %s, percentage : %d, need count : %d, client ip : %s", 
+                queryProto->fileid(), queryProto->percentage(), queryProto->needcount(), sock_.peerAddress().toString());
+        return ret;
+    }
+
+    out->set_count( fileInfoCollection.size() );
+    for(int i = 0; i != fileInfoCollection.size(); ++i){
+        std::pair<Tracker::ClientPtr, int>& v = fileInfoCollection[i];
+        PeerFileInfo* info = out->add_info();
+        Peer* p = info->mutable_client();
+        p->set_clientid( v.first->clientid() );
+        p->set_ip( v.first->ip() );
+        p->set_messageport( v.first->messageport() );
+        info->set_percentage( v.second );
+    }
+
     return ERROR_OK;
 }
-retcode_t TrackerConnectionHandler::HandlePublishResource(const NetPack& in, NetPack* out){
+
+retcode_t TrackerConnectionHandler::HandleReportProgress(SharedPtr<Message> in, MessageReply* out){
+    SharedPtr<ReportProgress> reportProto = in.cast<ReportProgress>();
+    retcode_t ret = ERROR_UNKNOWN;
+    out->set_returncode( ERROR_UNKNOWN );
+
+    if( reportProto.isNull() ){
+        return ERROR_PROTO_TYPE_ERROR;
+    }
+
+    ret = app_.ReportProgress(reportProto->fileid(), reportProto->clientid(), reportProto->percentage());
+    if( ret != ERROR_OK ){
+        return ret;
+    }
+
+    out->set_returncode(ERROR_OK);
+    return ERROR_OK;
+}
+
+retcode_t TrackerConnectionHandler::HandlePublishResource(SharedPtr<Message> in, MessageReply* out){
+    SharedPtr<PublishResource> publishProto = in.cast<PublishResource>();
+    retcode_t ret = ERROR_UNKNOWN;
+    out->set_returncode( ERROR_UNKNOWN );
+
+    if( publishProto.isNull() ){
+        return ERROR_PROTO_TYPE_ERROR;
+    }
+
+    ret = app_.PublishResource( publishProto->clientid(),  publishProto->fileid() );
+    if( ret != ERROR_OK ){
+        return ret;
+    }
+
+    out->set_returncode( ERROR_OK );
     return ERROR_OK;
 }
 

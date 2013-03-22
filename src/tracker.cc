@@ -78,7 +78,7 @@ int Tracker::main(const std::vector<std::string>& args)
         reactor.stop();
         thread.join();
 
-    }catch(exception& e){
+}catch(exception& e){
         std::cout << e.what() << std::endl;
     }
     return Application::EXIT_OK;
@@ -104,11 +104,11 @@ retcode_t Tracker::RemoveOnlineUser(const string& clientId){
 }
 
 retcode_t Tracker::RequestClients(const string& fileId, int percentage, int needCount,
-        const ClientIdCollection& ownedClientIdList, ClientIdCollection* clients){
+        const ClientIdCollection& ownedClientIdList, ClientFileInfoCollection* clients){
     return ERROR_OK;
 }
 
-retcode_t Tracker::ReportProgress(const string& fileId, const string& clientId, int percentage){
+retcode_t Tracker::ReportProgress(const string& clientId, const string& fileId, int percentage){
     return ERROR_OK;
 }
 retcode_t Tracker::PublishResource(const string& clientId, const string& fileId){

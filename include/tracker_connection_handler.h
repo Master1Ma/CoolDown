@@ -8,6 +8,7 @@
 #include <Poco/Net/SocketReactor.h>
 #include <Poco/Net/SocketNotification.h>
 #include <Poco/Net/StreamSocket.h>
+#include <Poco/SharedPtr.h>
 #include <Poco/NObserver.h>
 #include <Poco/Data/Session.h>
 #include <google/protobuf/message.h>
@@ -18,6 +19,7 @@ using Poco::Net::SocketReactor;
 using Poco::Net::ReadableNotification;
 using Poco::Net::ShutdownNotification;
 using Poco::Net::StreamSocket;
+using Poco::SharedPtr;
 using Poco::NObserver;
 using Poco::AutoPtr;
 using Poco::Data::Session;
@@ -42,11 +44,11 @@ class TrackerConnectionHandler
     private:
         const static size_t BUF_LEN = 1 << 10;
 
-        retcode_t HandleLogin(const NetPack& in, NetPack* out);
-        retcode_t HandleLogOut(const NetPack& in, NetPack* out);
-        retcode_t HandleRequestPeer(const NetPack& in, NetPack* out);
-        retcode_t HandleReportProgress(const NetPack& in, NetPack* out);
-        retcode_t HandlePublishResource(const NetPack& in, NetPack* out);
+        retcode_t HandleLogin(SharedPtr<Message> in, MessageReply* out);
+        retcode_t HandleLogOut(SharedPtr<Message> in, MessageReply* out);
+        retcode_t HandleRequestPeer(SharedPtr<Message> in, QueryPeerReply* out);
+        retcode_t HandleReportProgress(SharedPtr<Message> in, MessageReply* out);
+        retcode_t HandlePublishResource(SharedPtr<Message> in, MessageReply* out);
 
         //proto itself is changed in the func ParseProto, so it must be a ref
         retcode_t ParseProto(const string& name, Message* &proto);

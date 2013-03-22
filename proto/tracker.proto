@@ -14,14 +14,15 @@ message PeerFileInfo{
 message QueryPeer{
     required string FileId = 1;
     required int32 Percentage = 2;
-    optional int32 NeedCount = 3;
+    optional int32 NeedCount = 3 [default = 20];
     repeated string OwnedClients = 4;
 }
 
+//Count = -1 means that the tracker doesn't track the file at all.
 message QueryPeerReply{
     required string FileId = 1;
     required int32 Count = 2;
-    repeated PeerFileInfo PeerFileInfoList = 3;
+    repeated PeerFileInfo Info = 3;
 }
 
 message Login{
@@ -47,6 +48,6 @@ message PublishResource{
 }
 
 message MessageReply{
-    required string ReturnCode = 1;
+    required int32 ReturnCode = 1;
     optional string Message = 2;
 }

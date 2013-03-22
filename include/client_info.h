@@ -12,15 +12,15 @@ class ClientInfo{
         ClientInfo(const string& clientId, const string& ip, UInt16 messagePort); 
         ~ClientInfo();
 
-        string ClientId() const{
+        string clientid() const{
             return clientId_;
         }
 
-        string Ip() const{
+        string ip() const{
             return ip_;
         }
 
-        UInt16 MessagePort() const{
+        UInt16 messageport() const{
             return messagePort_;
         }
 
