@@ -9,7 +9,7 @@ using Poco::UInt16;
 
 class ClientInfo{
     public:
-        ClientInfo(const string& clientId, const string& ip, UInt16 messagePort, UInt16 dataPort); 
+        ClientInfo(const string& clientId, const string& ip, UInt16 messagePort); 
         ~ClientInfo();
 
         string ClientId() const{
@@ -24,15 +24,10 @@ class ClientInfo{
             return messagePort_;
         }
 
-        UInt16 DataPort() const{
-            return dataPort_;
-        }
-
     private:
         string clientId_;
         string ip_;
         UInt16 messagePort_;
-        UInt16 dataPort_;
 };
 
 #endif

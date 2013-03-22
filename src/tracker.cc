@@ -104,7 +104,7 @@ retcode_t Tracker::RemoveOnlineUser(const string& clientId){
 }
 
 retcode_t Tracker::RequestClients(const string& fileId, uint16_t percentage, 
-        const ClientIdCollection& ownedClientIdList, ClientIdCollection& clients){
+        const ClientIdCollection& ownedClientIdList, ClientIdCollection* clients){
     return ERROR_OK;
 }
 

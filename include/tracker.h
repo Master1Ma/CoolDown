@@ -62,7 +62,7 @@ class Tracker: public Poco::Util::ServerApplication
 {
 public:
     typedef SharedPtr<ClientInfo> ClientPtr;
-    typedef vector< std::pair<ClientPtr, uint16_t> > ClientFileInfoCollection;
+    typedef vector< std::pair<ClientPtr, int> > ClientFileInfoCollection;
     typedef vector<string> ClientIdCollection;
 	Tracker();
 	~Tracker();
@@ -71,17 +71,12 @@ public:
        return *pSession;
     };
 
-    /*
-    retcode_t update_user_info(const string& nodeId, SharedPtr<NodeInfo> pInfo);
-    retcode_t find_user_info();
-    */
-
     retcode_t AddOnlineUser(const string& clientId, ClientPtr peer);
     retcode_t RemoveOnlineUser(const string& clientId);
-    retcode_t RequestClients(const string& fileId, uint16_t percentage, 
-            const ClientIdCollection& ownedClientIdList, ClientIdCollection& clients);
+    retcode_t RequestClients(const string& fileId, int percentage, int needCount,
+            const ClientIdCollection& ownedClientIdList, ClientIdCollection* clients);
 
-    retcode_t ReportPercentage(const string& clientId, uint16_t percentage);
+    retcode_t ReportPercentage(const string& fileId, const string& clientId, int percentage);
     retcode_t PublishResource(const string& clientId, const string& fileId);
 
 protected:

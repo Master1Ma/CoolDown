@@ -1,6 +1,7 @@
 #ifndef CONNECTION_HANDLER_H
 #define CONNECTION_HANDLER_H
 
+#include "tracker.pb.h"
 #include <Poco/Logger.h>
 #include <Poco/Net/SocketReactor.h>
 #include <Poco/Net/SocketNotification.h>
@@ -20,6 +21,8 @@ using Poco::Data::Session;
 class Tracker;
 class NetPack;
 
+using namespace TrackerProto;
+
 class TrackerConnectionHandler
 {
     public:
@@ -33,6 +36,16 @@ class TrackerConnectionHandler
 
     private:
         const static size_t BUF_LEN = 1 << 10;
+
+        retcode_t HandleLogin(const NetPack& in, NetPack* out);
+        retcode_t HandleLogOut(const NetPack& in, NetPack* out);
+        retcode_t HandleRequestPeer(const NetPack& in, NetPack* out);
+        retcode_t HandleReportProgress(const NetPack& in, NetPack* out);
+        retcode_t HandlePublishResource(const NetPack& in, NetPack* out);
+
+        retcode_t ParseProto(const string& name, Message* proto);
+        /*
+        */
 
         StreamSocket sock_;
         SocketReactor& reactor_;

@@ -77,7 +77,7 @@ void TrackerConnectionHandler::Process(const NetPack& in, NetPack* out){
              break;
         case PAYLOAD_REQUEST_PEER:
              break;
-        case PAYLOAD_REPORT_PERCENTAGE:
+    case PAYLOAD_REPORT_PROGRESS:
              break;
         case PAYLOAD_PUBLISH_RESOURCE:
              break;
@@ -85,4 +85,52 @@ void TrackerConnectionHandler::Process(const NetPack& in, NetPack* out){
              poco_warning_f2(logger_, "Unknown PayloadType : %d , remote addr : %s.", in.payloadtype(), sock_.peerAddress().toString() );
              break;
     }
+}
+
+retcode_t TrackerConnectionHandler::HandleLogin(const string& in, NetPack* out){
+    const static string PROTONAME("TrackerProto.Login");
+    Message* pMessage = NULL;
+    retcode_t ret = ERROR_OK;
+    ret = ParseProto(PROTONAME, pMessage);
+    if( ERROR_OK != ret ){
+        return ret;
+    }
+    if( !pMessage ){
+        return ERROR_PROTO_PARSE_ERROR;
+    }
+
+    Login* loginProto = dynamic_cast<Login*>( pMessage );
+    if( !loginProto ){
+        return ERROR_PROTO_PARSE_ERROR;
+    }
+
+    SharedPtr<Login> msg( loginProto );
+   
+    string ip = msg->has_loginip() ? msg->loginip() : sock_.peerAddress().toString();
+    Tracker::ClientPtr client( new ClientInfo(msg->clientid(), ip, msg->messageport()) );
+    ret = app_.AddOnlineUser(msg->ClientId(), client);
+    if( ret != ERROR_OK ){
+        poco_warning_f1("Cannot add online user, client id : %s, client ip : %s, retCode : %d.", 
+                msg->clientid(), ip, ret);
+        return ret;
+    }
+    return ret;
+}
+retcode_t TrackerConnectionHandler::HandleLogOut(const string& in, NetPack* out);
+retcode_t TrackerConnectionHandler::HandleRequestPeer(const string& in, NetPack* out);
+retcode_t TrackerConnectionHandler::HandleReportProgress(const string& in, NetPack* out);
+retcode_t TrackerConnectionHandler::HandlePublishResource(const string& in, NetPack* out);
+
+retcode_t TrackerConnectionHandler::ParseProto(const string& name, Message* &proto){
+    message = NULL;
+    const Descriptor* descriptor = DescriptorPool::generated_pool()->FindMessageTypeByName(name);
+    if (descriptor)
+    {
+        const Message* prototype = MessageFactory::generated_factory()->GetPrototype(descriptor);
+        if (prototype)
+        {
+          message = prototype->New();
+        }
+    }
+    return message;
 }
