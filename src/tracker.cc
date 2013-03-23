@@ -105,6 +105,10 @@ retcode_t Tracker::RemoveOnlineUser(const string& clientId){
 
 retcode_t Tracker::RequestClients(const string& fileId, int percentage, int needCount,
         const ClientIdCollection& ownedClientIdList, ClientFileInfoCollection* clients){
+    if( fileInfoMap_.end() == fileInfoMap_.find(fileId) ){
+        return ERROR_FILE_NOT_FOUND;
+    }
+
     return ERROR_OK;
 }
 

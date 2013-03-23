@@ -2,6 +2,7 @@
 #define TRACKER_H
 
 #include <vector>
+#include <map>
 #include "Poco/Logger.h"
 #include "Poco/Net/SocketReactor.h"
 #include "Poco/Net/SocketAcceptor.h"
@@ -23,8 +24,9 @@
 #include "client_info.h"
 #include "tracker_connection_handler.h"
 
-using std::vector;
 using std::pair;
+using std::vector;
+using std::map;
 using Poco::Logger;
 using Poco::Net::SocketReactor;
 using Poco::Net::SocketAcceptor;
@@ -88,11 +90,16 @@ protected:
 	
 private:
     typedef string ClientId;
+    typedef string FileId;
+    typedef int Percentage;
 
     int init_db_tables();
     HashMap<ClientId, ClientPtr> clientMap_;
+    HashMap<FileId, map<ClientPtr, Percentage> > fileInfoMap_;
 
     FastMutex clientMapMutex_;
+    FastMutex fileInfoMapMutex_;
+    FastMutex dbMutex_;
     Poco::Data::Session* pSession;
 };
 
