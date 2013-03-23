@@ -26,7 +26,7 @@
 
 using std::pair;
 using std::vector;
-using std::map;
+using std::multimap;
 using Poco::Logger;
 using Poco::Net::SocketReactor;
 using Poco::Net::SocketAcceptor;
@@ -47,8 +47,6 @@ using Poco::HashMap;
 using Poco::FastMutex;
 using Poco::SharedPtr;
 
-using std::exception;
-
 namespace Poco{
     template<>
     class ReleasePolicy<ClientInfo>
@@ -64,7 +62,7 @@ class Tracker: public Poco::Util::ServerApplication
 {
 public:
     typedef SharedPtr<ClientInfo> ClientPtr;
-    typedef vector< std::pair<ClientPtr, int> > ClientFileInfoCollection;
+    typedef vector< std::pair<int, ClientPtr> > ClientFileInfoCollection;
     typedef vector<string> ClientIdCollection;
 	Tracker();
 	~Tracker();
@@ -95,7 +93,7 @@ private:
 
     int init_db_tables();
     HashMap<ClientId, ClientPtr> clientMap_;
-    HashMap<FileId, map<ClientPtr, Percentage> > fileInfoMap_;
+    HashMap<FileId, multimap<Percentage, ClientPtr> > fileInfoMap_;
 
     FastMutex clientMapMutex_;
     FastMutex fileInfoMapMutex_;

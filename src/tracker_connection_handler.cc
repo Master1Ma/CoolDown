@@ -167,13 +167,13 @@ SharedPtr<QueryPeer> queryProto = in.cast<QueryPeer>();
 
     out->set_count( fileInfoCollection.size() );
     for(int i = 0; i != fileInfoCollection.size(); ++i){
-        std::pair<Tracker::ClientPtr, int>& v = fileInfoCollection[i];
+        std::pair<int, Tracker::ClientPtr>& v = fileInfoCollection[i];
         PeerFileInfo* info = out->add_info();
         Peer* p = info->mutable_client();
-        p->set_clientid( v.first->clientid() );
-        p->set_ip( v.first->ip() );
-        p->set_messageport( v.first->messageport() );
-        info->set_percentage( v.second );
+        p->set_clientid( v.second->clientid() );
+        p->set_ip( v.second->ip() );
+        p->set_messageport( v.second->messageport() );
+        info->set_percentage( v.first );
     }
 
     return ERROR_OK;
