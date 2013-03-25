@@ -17,6 +17,7 @@
 #include "Poco/Util/HelpFormatter.h"
 #include "Poco/Data/Session.h"
 #include "Poco/Data/SQLite/Connector.h"
+#include <boost/typeof/typeof.hpp>
 
 using Poco::Logger;
 using Poco::Net::SocketReactor;
@@ -109,10 +110,28 @@ retcode_t Tracker::RequestClients(const string& fileId, int percentage, int need
         return ERROR_FILE_NOT_FOUND;
     }
 
+
+
     return ERROR_OK;
 }
 
 retcode_t Tracker::ReportProgress(const string& clientId, const string& fileId, int percentage){
+    if( fileInfoMap_.end() == fileInfoMap_.find(fileId) ){
+        return ERROR_FILE_NOT_FOUND;
+    }
+    percentage_map_t percentage_map = fileInfoMap_[fileId];
+    
+    /*
+    BOOST_AUTO( iter, percentage_map->begin() );
+    while( iter != percentage_map->end() ){
+        if( iter->second == clientId ){
+            //iter->first = percentage;
+            int p = iter->first;
+            break;
+        }
+        ++iter;
+    }
+    */
     return ERROR_OK;
 }
 

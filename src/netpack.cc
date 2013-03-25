@@ -3,6 +3,8 @@
 #include <Poco/Buffer.h>
 #include <Poco/Util/Application.h>
 #include <Poco/ByteOrder.h>
+#include <google/protobuf/descriptor.h>
+#include <google/protobuf/message.h>
 
 using Poco::Net::SocketStream;
 using Poco::Buffer;

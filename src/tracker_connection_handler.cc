@@ -4,6 +4,7 @@
 #include "payload_type.h"
 #include <Poco/Util/Application.h>
 #include <Poco/Logger.h>
+#include <google/protobuf/descriptor.h>
 
 using Poco::Util::Application;
 

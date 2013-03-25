@@ -90,10 +90,15 @@ private:
     typedef string ClientId;
     typedef string FileId;
     typedef int Percentage;
+    typedef HashMap<ClientId, ClientPtr> client_map_t;
+    typedef SharedPtr< map<Percentage, set<string> > >percentage_map_t;
+    typedef HashMap<FileId, percentage_map_t > file_info_map_t;
 
     int init_db_tables();
-    HashMap<ClientId, ClientPtr> clientMap_;
-    HashMap<FileId, multimap<Percentage, ClientPtr> > fileInfoMap_;
+    client_map_t clientMap_;
+    //HashMap<FileId, multimap<Percentage, ClientPtr> > fileInfoMap_;
+    file_info_map_t fileInfoMap_;
+
 
     FastMutex clientMapMutex_;
     FastMutex fileInfoMapMutex_;
