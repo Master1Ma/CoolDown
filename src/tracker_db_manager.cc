@@ -65,6 +65,58 @@ retcode_t TrackerDBManager::search_file_owner_info(const string& fileid, FileOwn
     return ERROR_OK;
 }
 */
+retcode_t TrackerDBManager::search_near_percentage_client(const string& fileid, int percentage, int needCount,
+        const ClientIdCollection& clientids, FileOwnerInfoCollection* c){
+    if( needCount <= 0 ){
+        poco_notice_f1(logger_, "search_near_percentage_client with invalid needCount=%d.", needCount);
+        return ERROR_OK;
+    }
+
+    using namespace Poco::Data;
+    FastMutex::ScopedLock lock(mutex_);
+    string sql;
+    //%[0]s -> clientInfoTableName_, %[1]s -> fileOwnerTableName_
+    //%[2]s -> fileid, %[3]d -> percentage, %[4]s -> SearchType
+    //return 4 cols, ie clientid, ip, messageport, percentage
+    format( sql, 
+    "SELECT * FROM "
+    "("
+    "(SELECT CLIENTID,IP,MESSAGEPORT,PERCENTAGE FROM %[0]s INNER JOIN %[1]s "
+    "WHERE %[1]s.FILEID=%[2]s AND %[0]s.CLIENTID=%[1]s.CLIENTID AND %[0]s.ISONLINE=1 AND %[1]s.PERCENTAGE <= %[3]d ORDER BY PERCENTAGE DESC) AS GREATER_RECORDS " 
+    "UNION ALL "
+    "(SELECT CLIENTID,IP,MESSAGEPORT,PERCENTAGE FROM %[0]s INNER JOIN %[1]s "
+    "WHERE %[1]s.FILEID=%[2]s AND %[0]s.CLIENTID=%[1]s.CLIENTID AND %[0]s.ISONLINE=1 AND %[1]s.PERCENTAGE > %[3]d ORDER BY PERCENTAGE ASC ) AS LESS_EQUAL_RECORDS"
+    ") AS RECORDS WHERE PERCENTAGE != 0 ", clientInfoTableName_, fileOwnerTableName_, fileid, percentage);
+
+    Statement select(session_);
+
+    ClientIdCollection::const_iterator iter = clientids.begin();
+    ClientIdCollection::const_iterator end = clientids.end();
+    while( iter != end ){
+        sql.append( format("AND %s.CLIENTID != %s", fileOwnerTableName_, *iter) );
+        ++iter;
+    }
+    sql.append( format(" LIMIT %d", needCount) );
+
+    poco_notice_f1(logger_, "in search_percentage_raw, next execute :\n%s", sql);
+    select << sql;
+    select.execute();
+    RecordSet rs(select);
+
+    bool more = rs.moveFirst();
+    while(more){
+        more = rs.moveNext();
+        string clientid = rs[0].convert<string>();
+        string ip = rs[1].convert<string>();
+        int port = rs[2].convert<int>();
+        int percentage = rs[3].convert<int>();
+        ClientPtr pClient( new ClientInfo(clientid, ip, port) );
+        FileOwnerInfoPtr pFile( new FileOwnerInfo(clientid, fileid, percentage) );
+        c->push_back( make_pair(pClient, pFile) );
+    }
+
+    return ERROR_OK;
+}
 
 retcode_t TrackerDBManager::search_greater_percentage(const string& fileid, int percentage, int needCount,
     const ClientIdCollection& clientids, FileOwnerInfoCollection* c){

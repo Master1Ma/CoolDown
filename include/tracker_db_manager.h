@@ -45,8 +45,13 @@ class TrackerDBManager{
         retcode_t search_file_owner_info(const string& fileid, FileOwnerInfoPtrCollection* c);
         */
         //search func do not remove the items in FileOwnerInfoPtrCollection!
+        //
+        retcode_t search_near_percentage_client(const string& fileid, int percentage, int needCount,
+                const ClientIdCollection& clientids, FileOwnerInfoCollection* c);
+
         retcode_t search_greater_percentage(const string& fileid, int percentage, int needCount,
                 const ClientIdCollection& clientids, FileOwnerInfoCollection* c);
+
         retcode_t search_less_equal_percentage(const string& fileid, int percentage, int needCount, 
                 const ClientIdCollection& clientids, FileOwnerInfoCollection* c);
 
