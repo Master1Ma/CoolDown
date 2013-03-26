@@ -5,15 +5,16 @@
 #include <Poco/Util/Application.h>
 #include <Poco/Logger.h>
 #include <google/protobuf/descriptor.h>
+#include <Poco/Exception.h>
 
 using Poco::Util::Application;
+using Poco::Exception;
 
 TrackerConnectionHandler::TrackerConnectionHandler(const StreamSocket& sock, SocketReactor& reactor):
     sock_(sock),
     reactor_(reactor),
     logger_( Application::instance().logger() ),
-    app_( dynamic_cast<Tracker&>(Application::instance()) ),
-    session_( app_.session() )
+    app_( dynamic_cast<Tracker&>(Application::instance()) )
 {
     poco_information_f1(logger_, "Connection from %s", sock_.peerAddress().toString() );
 
@@ -74,27 +75,34 @@ void TrackerConnectionHandler::onShutdown(const AutoPtr<ShutdownNotification>& p
 void TrackerConnectionHandler::Process(const NetPack& in, NetPack* out){
     SharedPtr<Message> m = in.message();
     MessageReply mr;
+    mr.set_returncode(ERROR_UNKNOWN);
     QueryPeerReply qpr;
+    try{
 
-    switch( in.payloadtype() ){
-        case PAYLOAD_LOGIN: 
-            this->HandleLogin(m, &mr);
-             break;
-        case PAYLOAD_LOGOUT: 
-            this->HandleLogOut(m, &mr);
-             break;
-        case PAYLOAD_REQUEST_PEER:
-             this->HandleRequestPeer(m, &qpr);
-             break;
-        case PAYLOAD_REPORT_PROGRESS:
-            this->HandleReportProgress(m, &mr);
-             break;
-        case PAYLOAD_PUBLISH_RESOURCE:
-            this->HandlePublishResource(m, &mr);
-             break;
-        default:
-             poco_warning_f2(logger_, "Unknown PayloadType : %d , remote addr : %s.", in.payloadtype(), sock_.peerAddress().toString() );
-             break;
+        switch( in.payloadtype() ){
+            case PAYLOAD_LOGIN: 
+                this->HandleLogin(m, &mr);
+                 break;
+            case PAYLOAD_LOGOUT: 
+                this->HandleLogOut(m, &mr);
+                 break;
+            case PAYLOAD_REQUEST_PEER:
+                 this->HandleRequestPeer(m, &qpr);
+                 break;
+            case PAYLOAD_REPORT_PROGRESS:
+                this->HandleReportProgress(m, &mr);
+                 break;
+            case PAYLOAD_PUBLISH_RESOURCE:
+                this->HandlePublishResource(m, &mr);
+                 break;
+            default:
+                 poco_warning_f2(logger_, "Unknown PayloadType : %d , remote addr : %s.", 
+                         in.payloadtype(), sock_.peerAddress().toString() );
+                 break;
+        }
+    }catch(Exception& e){
+        poco_warning_f3(logger_, "Got exception while Process Request, client ip : %s, netpack debug string : \n%sException content:\n%s", 
+                sock_.peerAddress().toString(), in.debug_string(), e.message());
     }
 
     if( in.payloadtype() != PAYLOAD_REQUEST_PEER ){
@@ -115,7 +123,7 @@ retcode_t TrackerConnectionHandler::HandleLogin(SharedPtr<Message> in, MessageRe
 
     string ip = loginProto->has_loginip() ? loginProto->loginip() : sock_.peerAddress().toString();
     Tracker::ClientPtr client( new ClientInfo(loginProto->clientid(), ip, loginProto->messageport()) );
-    ret = app_.AddOnlineUser(loginProto->clientid(), client);
+    ret = app_.AddOnlineUser(client);
 
     if( ret != ERROR_OK ){
         poco_warning_f3(logger_,"Cannot add online user, client id : %s, client ip : %s, retCode : %d.", 
@@ -145,7 +153,7 @@ retcode_t TrackerConnectionHandler::HandleLogOut(SharedPtr<Message> in, MessageR
 }
 
 retcode_t TrackerConnectionHandler::HandleRequestPeer(SharedPtr<Message> in, QueryPeerReply* out){
-SharedPtr<QueryPeer> queryProto = in.cast<QueryPeer>();
+    SharedPtr<QueryPeer> queryProto = in.cast<QueryPeer>();
     retcode_t ret = ERROR_UNKNOWN;
 
     if( queryProto.isNull() ){
@@ -168,13 +176,13 @@ SharedPtr<QueryPeer> queryProto = in.cast<QueryPeer>();
 
     out->set_count( fileInfoCollection.size() );
     for(int i = 0; i != fileInfoCollection.size(); ++i){
-        std::pair<int, Tracker::ClientPtr>& v = fileInfoCollection[i];
+        std::pair<Tracker::ClientPtr, Tracker::FileOwnerInfoPtr>& v = fileInfoCollection[i];
         PeerFileInfo* info = out->add_info();
         Peer* p = info->mutable_client();
-        p->set_clientid( v.second->clientid() );
-        p->set_ip( v.second->ip() );
-        p->set_messageport( v.second->messageport() );
-        info->set_percentage( v.first );
+        p->set_clientid( v.first->clientid() );
+        p->set_ip( v.first->ip() );
+        p->set_messageport( v.first->messageport() );
+        info->set_percentage( v.second->percentage() );
     }
 
     return ERROR_OK;

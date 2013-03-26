@@ -1,9 +1,10 @@
 #include "tracker.h"
 #include "netpack.h"
 #include "tracker_connection_handler.h"
+#include "tracker_db_manager.h"
+#include "file_owner_info.h"
 
 #include <iostream>
-#include <exception>
 #include "Poco/Logger.h"
 #include "Poco/Net/SocketReactor.h"
 #include "Poco/Net/SocketAcceptor.h"
@@ -17,7 +18,11 @@
 #include "Poco/Util/HelpFormatter.h"
 #include "Poco/Data/Session.h"
 #include "Poco/Data/SQLite/Connector.h"
-#include <boost/typeof/typeof.hpp>
+#include <Poco/DateTimeFormat.h>
+#include <Poco/DateTimeFormatter.h>
+#include <Poco/LocalDateTime.h>
+#include <Poco/Exception.h>
+#include <Poco/Data/MySQL/Connector.h>
 
 using Poco::Logger;
 using Poco::Net::SocketReactor;
@@ -35,8 +40,8 @@ using Poco::Util::Option;
 using Poco::Util::OptionSet;
 using Poco::Util::HelpFormatter;
 using Poco::Data::Session;
-
-using std::exception;
+using Poco::LocalDateTime;
+using Poco::Exception;
 
 Tracker::Tracker()
 {
@@ -51,6 +56,12 @@ void Tracker::initialize(Application& self)
     loadConfiguration(); // load default configuration files, if present
     ServerApplication::initialize(self);
     logger().setLevel("debug");
+    Poco::Data::MySQL::Connector::registerConnector();
+    dbManager_.assign(new TrackerDBManager);
+    if( dbManager_.isNull() ){
+        poco_error(logger(), "Cannot create TrackerDBManager!");
+    }
+    timeFormat_ = Poco::DateTimeFormat::HTTP_FORMAT;
 }
 		
 void Tracker::uninitialize()
@@ -61,10 +72,6 @@ void Tracker::uninitialize()
 int Tracker::main(const std::vector<std::string>& args)
 {
     try{
-        if( init_db_tables() ){
-            return Application::EXIT_CANTCREAT;
-        }
-
         unsigned short port = (unsigned short) config().getInt("TrackerServer.port", 9977);
 
         ServerSocket svs(port);
@@ -79,109 +86,61 @@ int Tracker::main(const std::vector<std::string>& args)
         reactor.stop();
         thread.join();
 
-}catch(exception& e){
+}catch(Exception& e){
         std::cout << e.what() << std::endl;
     }
     return Application::EXIT_OK;
 }
 
-retcode_t Tracker::AddOnlineUser(const string& clientId, ClientPtr peer){
-    if( clientMap_.end() != clientMap_.find(clientId) ){
-        return ERROR_CLIENT_ALREADY_EXISTS;
-    }
-
-    FastMutex::ScopedLock lock( clientMapMutex_ );
-    clientMap_[clientId] = peer;
-    return ERROR_OK;
+retcode_t Tracker::AddOnlineUser(ClientPtr peer){
+        string loginTime( this->get_current_time() );
+        retcode_t ret = dbManager_->insert_or_update_login_info(peer->clientid(), peer->ip(), peer->messageport(), loginTime);
+        return ret;
 }
 
-retcode_t Tracker::RemoveOnlineUser(const string& clientId){
-    if( clientMap_.end() == clientMap_.find(clientId) ){
-        return ERROR_CLIENT_NOT_FOUND;
-    }
-    FastMutex::ScopedLock lock( clientMapMutex_ );
-    clientMap_.erase(clientId);
-    return ERROR_OK;
-}
-
-retcode_t Tracker::RequestClients(const string& fileId, int percentage, int needCount,
-        const ClientIdCollection& ownedClientIdList, ClientFileInfoCollection* clients){
-    if( fileInfoMap_.end() == fileInfoMap_.find(fileId) ){
-        return ERROR_FILE_NOT_FOUND;
-    }
-
-
-
-    return ERROR_OK;
-}
-
-retcode_t Tracker::ReportProgress(const string& clientId, const string& fileId, int percentage){
-    if( fileInfoMap_.end() == fileInfoMap_.find(fileId) ){
-        return ERROR_FILE_NOT_FOUND;
-    }
-    percentage_map_t percentage_map = fileInfoMap_[fileId];
-    
-    /*
-    BOOST_AUTO( iter, percentage_map->begin() );
-    while( iter != percentage_map->end() ){
-        if( iter->second == clientId ){
-            //iter->first = percentage;
-            int p = iter->first;
-            break;
-        }
-        ++iter;
-    }
-    */
-    return ERROR_OK;
-}
-
-retcode_t Tracker::PublishResource(const string& clientId, const string& fileId){
-    return ERROR_OK;
-}
-
-int Tracker::init_db_tables(){
-
-    using namespace Poco::Data;
-    int ret = 0;
-
-    try{
-        Poco::Data::SQLite::Connector::registerConnector();
-
-        string dbFilename = config().getString("Database.Filename", "tracker.db");
-        string clientInfoTableName = config().getString("Database.ClientInfo.TableName", "ClientInfo");
-        string fileOwnerTableName = config().getString("Database.FileOwner.TableName", "FileOwner");
-
-        pSession = new Session("SQLite", dbFilename);
-        if( NULL == pSession ){
-            throw std::runtime_error("Cannot make new session!");
-        }
-
-        Session& session = *pSession;
-        session << "CREATE TABLE IF NOT EXISTS " << clientInfoTableName << "("
-                   "ClientId VARCHAR(40) PRIMARY KEY,"
-                   "UploadTotal VARCHAR(20),"
-                   "DownloadTotal VARCHAR(20),"
-                   "CreateTime VARCHAR(40),"
-                   "LastLoginTime VARCHAR(40)"
-                   ");", now;
-
-        session << "CREATE TABLE IF NOT EXISTS " << fileOwnerTableName << "("
-                   "id INTEGER PRIMARY KEY autoincrement,"
-                   "FileId VARCHAR(40),"
-                   "NodeId VARCHAR(40),"
-                   "Percentage INTEGER"
-                   ");", now;
-
-    }catch(exception& e){
-        poco_error_f1(logger(), "Got exception while init db : %s", e.what() );
-        ret = -1;
-    }
-
+retcode_t Tracker::RemoveOnlineUser(const string& clientid){
+    Int64 uploadTotal = 0;
+    Int64 downloadTotal = 0;
+    retcode_t ret = dbManager_->update_logout_info(clientid, uploadTotal, downloadTotal);
     return ret;
 }
 
-int main(int argc, char* argv[]){
-    Tracker tracker;
-    return tracker.run(argc, argv);
+retcode_t Tracker::RequestClients(const string& fileid, int percentage, int needCount,
+        const ClientIdCollection& ownedClientIdList, ClientFileInfoCollection* clients){
+    clients->clear();
+    retcode_t ret = dbManager_->search_greater_percentage(fileid, percentage, needCount, ownedClientIdList, clients);
+    if( ret != ERROR_OK ){
+        return ret;
+    }
+    if( clients->size() < needCount ){
+        ret = dbManager_->search_less_equal_percentage(fileid, percentage, needCount - clients->size(), ownedClientIdList, clients);
+        if( ret != ERROR_OK ){
+            return ret;
+        }
+    }
+    return ERROR_OK;
 }
+
+retcode_t Tracker::ReportProgress(const string& clientid, const string& fileid, int percentage){
+    FileOwnerInfo info(clientid, fileid, percentage);
+    return dbManager_->update_file_owner_info(info);
+}
+
+retcode_t Tracker::PublishResource(const string& clientid, const string& fileid){
+    return this->ReportProgress(clientid, fileid, 100);
+}
+
+string Tracker::get_current_time() const{
+    LocalDateTime now;
+    return Poco::DateTimeFormatter::format(now, timeFormat_);
+}
+int main(int argc, char* argv[]){
+    try{
+        Tracker tracker;
+        return tracker.run(argc, argv);
+    }catch(Exception& e){
+        std::cout << e.message() << std::endl;
+    }
+}
+
 

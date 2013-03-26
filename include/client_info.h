@@ -2,14 +2,12 @@
 #define CLIENT_INFO_H
 
 #include <string>
-#include <Poco/Types.h>
 
 using std::string;
-using Poco::UInt16;
 
 class ClientInfo{
     public:
-        ClientInfo(const string& clientId, const string& ip, UInt16 messagePort); 
+        ClientInfo(const string& clientId, const string& ip, int messagePort); 
         ~ClientInfo();
 
         string clientid() const{
@@ -20,14 +18,14 @@ class ClientInfo{
             return ip_;
         }
 
-        UInt16 messageport() const{
+        int messageport() const{
             return messagePort_;
         }
 
     private:
         string clientId_;
         string ip_;
-        UInt16 messagePort_;
+        int messagePort_;
 };
 
 #endif

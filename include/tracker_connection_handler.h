@@ -22,7 +22,6 @@ using Poco::Net::StreamSocket;
 using Poco::SharedPtr;
 using Poco::NObserver;
 using Poco::AutoPtr;
-using Poco::Data::Session;
 using google::protobuf::Message;
 
 class Tracker;
@@ -58,7 +57,6 @@ class TrackerConnectionHandler
         StreamSocket sock_;
         SocketReactor& reactor_;
         Logger& logger_;
-        Session& session_;
         Tracker& app_;
 };
 #endif

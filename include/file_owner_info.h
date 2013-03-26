@@ -1,6 +1,9 @@
 #ifndef FILE_OWNER_INFO_H
 #define FILE_OWNER_INFO_H
 
+#include <string>
+using std::string;
+
 class FileOwnerInfo{
     public:
         FileOwnerInfo();

@@ -23,6 +23,7 @@
 #include "netpack.h"
 #include "client_info.h"
 #include "tracker_connection_handler.h"
+#include "tracker_db_manager.h"
 
 using std::pair;
 using std::vector;
@@ -61,17 +62,14 @@ namespace Poco{
 class Tracker: public Poco::Util::ServerApplication
 {
 public:
-    typedef SharedPtr<ClientInfo> ClientPtr;
-    typedef vector< std::pair<int, ClientPtr> > ClientFileInfoCollection;
-    typedef vector<string> ClientIdCollection;
+    typedef TrackerDBManager::ClientPtr ClientPtr;
+    typedef TrackerDBManager::FileOwnerInfoPtr FileOwnerInfoPtr;
+    typedef TrackerDBManager::FileOwnerInfoCollection ClientFileInfoCollection;
+    typedef TrackerDBManager::ClientIdCollection ClientIdCollection;
 	Tracker();
 	~Tracker();
 
-    Session& session(){
-       return *pSession;
-    };
-
-    retcode_t AddOnlineUser(const string& clientId, ClientPtr peer);
+    retcode_t AddOnlineUser(ClientPtr peer);
     retcode_t RemoveOnlineUser(const string& clientId);
     retcode_t RequestClients(const string& fileId, int percentage, int needCount,
             const ClientIdCollection& ownedClientIdList, ClientFileInfoCollection* clients);
@@ -87,23 +85,9 @@ protected:
 
 	
 private:
-    typedef string ClientId;
-    typedef string FileId;
-    typedef int Percentage;
-    typedef HashMap<ClientId, ClientPtr> client_map_t;
-    typedef SharedPtr< map<Percentage, set<string> > >percentage_map_t;
-    typedef HashMap<FileId, percentage_map_t > file_info_map_t;
-
-    int init_db_tables();
-    client_map_t clientMap_;
-    //HashMap<FileId, multimap<Percentage, ClientPtr> > fileInfoMap_;
-    file_info_map_t fileInfoMap_;
-
-
-    FastMutex clientMapMutex_;
-    FastMutex fileInfoMapMutex_;
-    FastMutex dbMutex_;
-    Poco::Data::Session* pSession;
+    string get_current_time() const;
+    SharedPtr<TrackerDBManager> dbManager_;
+    string timeFormat_;
 };
 
 
