@@ -56,6 +56,7 @@ class TrackerDBManager{
                 const ClientIdCollection& clientids, FileOwnerInfoCollection* c);
 
         retcode_t update_file_owner_info(const FileOwnerInfo& info);
+        retcode_t remove_file_owner_info(const FileOwnerInfo& info);
 
     private:
         retcode_t search_percentage_raw(SearchType type, const string& fileid, int percentage, int needCount,
