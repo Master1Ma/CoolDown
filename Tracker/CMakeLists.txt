@@ -8,15 +8,8 @@ SET( BIN_NAME Tracker)
 INCLUDE_DIRECTORIES( include )
 
 #link proto files to include & src 
-execute_process(COMMAND ${protoc.cmd} ${protoc.arg} ${protoc.arg2} ${protoc.file1} ${protoc.file2} )
-execute_process(COMMAND ln -Ff ${CMAKE_SOURCE_DIR}/proto/tracker.pb.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/tracker.pb.h)
-execute_process(COMMAND ln -Ff ${CMAKE_SOURCE_DIR}/proto/tracker.pb.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/tracker.pb.cc)
-execute_process(COMMAND ln -Ff ${CMAKE_SOURCE_DIR}/proto/netpack_header.pb.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/netpack_header.pb.h)
-execute_process(COMMAND ln -Ff ${CMAKE_SOURCE_DIR}/proto/netpack_header.pb.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/netpack_header.pb.cc)
+execute_process(COMMAND ln -Ff ${CMAKE_SOURCE_DIR}/proto/tracker.pb.h ${CMAKE_CURRENT_SOURCE_DIR}/include/tracker.pb.h)
+execute_process(COMMAND ln -Ff ${CMAKE_SOURCE_DIR}/proto/tracker.pb.cc ${CMAKE_CURRENT_SOURCE_DIR}/src/tracker.pb.cc)
 
 FIND_LIBRARY(POCO_FOUNDATION PocoFoundation)
 FIND_LIBRARY(POCO_NET PocoNet)

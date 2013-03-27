@@ -1,0 +1,19 @@
+cmake_minimum_required(VERSION 2.6)
+PROJECT( CoolDown-Public-Netpack )
+SET(CMAKE_CXX_COMPILER "clang++") 
+SET( CMAKE_BUILD_TYPE "release" )
+SET( LIB_NAME "netpack" )
+INCLUDE_DIRECTORIES( include )
+INCLUDE_DIRECTORIES( ${CMAKE_SOURCE_DIR}/public/error_code/include )
+execute_process(COMMAND ln -Ff ${CMAKE_SOURCE_DIR}/proto/netpack_header.pb.h ${CMAKE_CURRENT_SOURCE_DIR}/include/netpack_header.pb.h)
+execute_process(COMMAND ln -Ff ${CMAKE_SOURCE_DIR}/proto/netpack_header.pb.cc ${CMAKE_CURRENT_SOURCE_DIR}/src/netpack_header.pb.cc)
+
+FIND_LIBRARY(POCO_FOUNDATION PocoFoundation)
+FIND_LIBRARY(POCO_NET PocoNet)
+FIND_LIBRARY(POCO_UTIL PocoUtil)
+FIND_LIBRARY(PROTOBUF protobuf)
+
+AUX_SOURCE_DIRECTORY( src DIR_SRCS )
+ADD_LIBRARY( ${LIB_NAME} SHARED ${DIR_SRCS} )
+TARGET_LINK_LIBRARIES( ${LIB_NAME} ${POCO_FOUNDATION} ${POCO_NET} ${POCO_UTIL}
+    ${PROTOBUF} ${ERROR_CODE})

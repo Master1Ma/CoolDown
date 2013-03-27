@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 2.6)
+PROJECT( CoolDown-Public )
+FILE(MAKE_DIRECTORY ${CURRENT_CURRENT_SOURCE_DIR}/lib)
+ADD_SUBDIRECTORY( error_code )
+ADD_SUBDIRECTORY( netpack )
