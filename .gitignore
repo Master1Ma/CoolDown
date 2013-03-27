@@ -15,3 +15,6 @@
 # Protobuf auto generated
 *.pb.h
 *.pb.cc
+
+# build dirs
+build/

@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 2.6)
-PROJECT( CoolDown-Tracker )
+PROJECT( CoolDown-Client )
 SET(CMAKE_CXX_COMPILER "clang++") 
 #SET( DIR_OUTPUT ${CMAKE_BINARY_DIR}/output )
 #SET( CMAKE_BUILD_TYPE "release" )
 #FILE(MAKE_DIRECTORY ${DIR_OUTPUT})
-SET( BIN_NAME Tracker)
+SET( BIN_NAME Client )
 INCLUDE_DIRECTORIES( include )
 
-#link proto files to include & src 
+#link proto files to include & src
 execute_process(COMMAND ${protoc.cmd} ${protoc.arg} ${protoc.arg2} ${protoc.file1} ${protoc.file2} )
 execute_process(COMMAND ln -Ff ${CMAKE_SOURCE_DIR}/proto/tracker.pb.h
     ${CMAKE_CURRENT_SOURCE_DIR}/include/tracker.pb.h)
