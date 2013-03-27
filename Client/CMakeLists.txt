@@ -1,22 +1,13 @@
 cmake_minimum_required(VERSION 2.6)
 PROJECT( CoolDown-Client )
 SET(CMAKE_CXX_COMPILER "clang++") 
-#SET( DIR_OUTPUT ${CMAKE_BINARY_DIR}/output )
 #SET( CMAKE_BUILD_TYPE "release" )
-#FILE(MAKE_DIRECTORY ${DIR_OUTPUT})
 SET( BIN_NAME Client )
 INCLUDE_DIRECTORIES( include )
 
 #link proto files to include & src
-execute_process(COMMAND ${protoc.cmd} ${protoc.arg} ${protoc.arg2} ${protoc.file1} ${protoc.file2} )
-execute_process(COMMAND ln -Ff ${CMAKE_SOURCE_DIR}/proto/tracker.pb.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/tracker.pb.h)
-execute_process(COMMAND ln -Ff ${CMAKE_SOURCE_DIR}/proto/tracker.pb.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/tracker.pb.cc)
-execute_process(COMMAND ln -Ff ${CMAKE_SOURCE_DIR}/proto/netpack_header.pb.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/netpack_header.pb.h)
-execute_process(COMMAND ln -Ff ${CMAKE_SOURCE_DIR}/proto/netpack_header.pb.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/netpack_header.pb.cc)
+#execute_process(COMMAND ln -Ff ${CMAKE_SOURCE_DIR}/proto/tracker.pb.h
+#    ${CMAKE_CURRENT_SOURCE_DIR}/include/tracker.pb.h)
 
 FIND_LIBRARY(POCO_FOUNDATION PocoFoundation)
 FIND_LIBRARY(POCO_NET PocoNet)
@@ -25,8 +16,12 @@ FIND_LIBRARY(POCO_DATA_MYSQL PocoDataMySQL)
 FIND_LIBRARY(POCO_UTIL PocoUtil)
 FIND_LIBRARY(PTHREAD pthread)
 FIND_LIBRARY(PROTOBUF protobuf)
+LINK_DIRECTORIES(${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+
+GET_PROPERTY(NETPACK GLOBAL PROPERTY LIB_NETPACK_FULLNAME)
+GET_PROPERTY(ERROR_CODE GLOBAL PROPERTY LIB_ERROR_CODE_FULLNAME)
 
 AUX_SOURCE_DIRECTORY( src DIR_SRCS )
 ADD_EXECUTABLE( ${BIN_NAME} ${DIR_SRCS} )
 TARGET_LINK_LIBRARIES( ${BIN_NAME} ${POCO_FOUNDATION} ${POCO_NET} ${POCO_DATA}
-    ${POCO_DATA_MYSQL} ${POCO_UTIL} ${PROTOBUF})
+    ${POCO_DATA_MYSQL} ${POCO_UTIL} ${PROTOBUF} ${NETPACK} ${ERROR_CODE} )
