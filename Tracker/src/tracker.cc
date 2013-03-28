@@ -137,13 +137,3 @@ string Tracker::get_current_time() const{
     LocalDateTime now;
     return Poco::DateTimeFormatter::format(now, timeFormat_);
 }
-int main(int argc, char* argv[]){
-    try{
-        Tracker tracker;
-        return tracker.run(argc, argv);
-    }catch(Exception& e){
-        std::cout << e.message() << std::endl;
-    }
-}
-
-
