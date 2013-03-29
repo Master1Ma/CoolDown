@@ -1,9 +1,11 @@
 cmake_minimum_required(VERSION 2.6)
 PROJECT( CoolDown-Client )
 SET(CMAKE_CXX_COMPILER "clang++") 
-#SET( CMAKE_BUILD_TYPE "release" )
 SET( BIN_NAME Client )
+GET_PROPERTY(ERROR_CODE_INCLUDE GLOBAL PROPERTY LIB_ERROR_CODE_INCLUDE)
 INCLUDE_DIRECTORIES( include )
+INCLUDE_DIRECTORIES( ${ERROR_CODE_INCLUDE} )
+
 
 #link proto files to include & src
 #execute_process(COMMAND ln -Ff ${CMAKE_SOURCE_DIR}/proto/tracker.pb.h

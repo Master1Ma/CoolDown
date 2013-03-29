@@ -1,16 +1,17 @@
 #ifndef LOCAL_SOCK_MANAGER_H
-#DEFINE LOCAL_SOCK_MANAGER_H
+#define LOCAL_SOCK_MANAGER_H
 
 #include "error_code.h"
 #include <map>
 #include <string>
-#include <Poco/StreamSocket.h>
+#include <Poco/Net/StreamSocket.h>
 #include <Poco/SharedPtr.h>
 #include <Poco/Logger.h>
-#include <Poco/FastMutex.h>
+#include <Poco/Mutex.h>
 
+using std::map;
 using std::string;
-using Poco::StreamSocket;
+using Poco::Net::StreamSocket;
 using Poco::SharedPtr;
 using Poco::Logger;
 using Poco::FastMutex;
