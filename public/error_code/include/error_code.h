@@ -30,6 +30,8 @@ enum retcode_t{
 
     ERROR_PROTO_PARSE_ERROR = 40001,
     ERROR_PROTO_TYPE_ERROR = 40002,
+
+    ERROR_VERIFY_INVALID_RANGE = 50001,
 };
 
 const char* errmsg(retcode_t ret);

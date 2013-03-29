@@ -9,11 +9,16 @@ using std::vector;
 using std::string;
 using Poco::Util::Application;
 
-class Client : public Application{
-    public:
-        void initialize(Application& self);
-        void uninitialize();
-        int main(const vector<string>& args);
-};
+namespace CoolDown{
+    namespace Client{
+
+            class CoolClient : public Application{
+                public:
+                    void initialize(Application& self);
+                    void uninitialize();
+                    int main(const vector<string>& args);
+            };
+    }
+}
 
 #endif

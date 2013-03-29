@@ -5,14 +5,19 @@
 using Poco::Exception;
 using Poco::Util::Application;
 
-void Client::initialize(Application& self){
-    Application::initialize(self);
-}
+namespace CoolDown{
+    namespace Client{
 
-void Client::uninitialize(){
-    Application::uninitialize();
-}
+            void CoolClient::initialize(Application& self){
+                Application::initialize(self);
+            }
 
-int Client::main(const vector<string>& args){
-    return Application::EXIT_OK;
+            void CoolClient::uninitialize(){
+                Application::uninitialize();
+            }
+
+            int CoolClient::main(const vector<string>& args){
+                return Application::EXIT_OK;
+            }
+    }
 }
