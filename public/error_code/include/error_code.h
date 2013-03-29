@@ -29,7 +29,7 @@ enum retcode_t{
     ERROR_NET_NOT_CONNECTED = 30005,
 
     ERROR_PROTO_PARSE_ERROR = 40001,
-    ERROR_PROTO_TYPE_ERROR = 40001,
+    ERROR_PROTO_TYPE_ERROR = 40002,
 };
 
 const char* errmsg(retcode_t ret);
