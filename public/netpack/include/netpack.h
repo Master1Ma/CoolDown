@@ -72,10 +72,10 @@ class NetPack{
         int payloadType_;
         string payload_;
         string messageName_;
-        Buffer<char> headerLengthBuf_;
 
         NetPackHeader header_;
         Logger& logger_;
+        Buffer<char> headerLengthBuf_;
 };
 
 #endif

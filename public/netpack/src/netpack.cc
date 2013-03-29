@@ -18,9 +18,9 @@ NetPack::NetPack()
 
 NetPack::NetPack(int payloadType, const Message& msg)
         :payloadType_(payloadType),
+        messageName_( msg.GetDescriptor()->full_name() ),
         logger_(Application::instance().logger()),
-        headerLengthBuf_(sizeof(Int32)),
-        messageName_( msg.GetDescriptor()->full_name() ){
+        headerLengthBuf_(sizeof(Int32)){
 
         if( false == msg.SerializeToString(&this->payload_) ){
             poco_error_f1(logger_, "Cannot serialize message to string, name : %s.", messageName_);
