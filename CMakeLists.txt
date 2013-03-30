@@ -4,7 +4,7 @@ SET(CMAKE_CXX_COMPILER "clang++")
 SET(CMAKE_CXX_FLAGS "-Wall")
 SET( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/public/lib )
 PROJECT( CoolDown )
-#ADD_DEFINITIONS( -DWall )
+ADD_DEFINITIONS( -DWall )
 
 #recompile the proto files
 SET( protoc.cmd "protoc")
