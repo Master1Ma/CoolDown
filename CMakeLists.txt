@@ -13,5 +13,5 @@ SET( protoc.file2 "${CMAKE_SOURCE_DIR}/proto/netpack_header.proto")
 EXECUTE_PROCESS( COMMAND ${protoc.cmd} ${protoc.arg} ${protoc.arg2} ${protoc.file1} ${protoc.file2} )
 
 ADD_SUBDIRECTORY( public )
-ADD_SUBDIRECTORY( Tracker )
-ADD_SUBDIRECTORY( Client )
+ADD_SUBDIRECTORY( tracker )
+ADD_SUBDIRECTORY( client )
