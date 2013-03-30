@@ -1,8 +1,9 @@
 cmake_minimum_required(VERSION 2.6)
+SET(CMAKE_CXX_COMPILER "clang++") 
+SET(CMAKE_CXX_FLAGS "-Wall")
+SET( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/public/lib )
 PROJECT( CoolDown )
 #ADD_DEFINITIONS( -DWall )
-set(CMAKE_CXX_FLAGS "-Wall")
-SET( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/public/lib )
 
 #recompile the proto files
 SET( protoc.cmd "protoc")

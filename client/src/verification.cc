@@ -16,12 +16,12 @@ namespace CoolDown{
         }
 
         string Verification::get_file_verification_code(const string& fullpath) {
-            const static size_t CHUNK_SIZE = 1 << 28;
             FastMutex::ScopedLock lock(mutex_);
             File f(fullpath);
             SharedMemory sm(f, SharedMemory::AM_READ);
             engine_.update(sm.begin(), f.getSize() );
             /*
+            const static size_t CHUNK_SIZE = 1 << 28;
             char* start = sm.begin();
             while( start + CHUNK_SIZE < sm.end() ){
                 this->calc_piece_verification_code( start, start + CHUNK_SIZE );
