@@ -28,6 +28,7 @@ NetPack::NetPack(int payloadType, const Message& msg)
 
         header_.set_payloadtype(payloadType_);
         header_.set_payloadlength( payload_.length() );
+        header_.set_messagename(messageName_);
 }
 
 retcode_t NetPack::sendBy(NetPack::SockType& sock) const{
@@ -62,7 +63,7 @@ retcode_t NetPack::receiveFrom(NetPack::SockType& sock){
     Int32 headerLength;
     retcode_t ret = this->receiveHeaderLength(sock, &headerLength);
     if( ret != ERROR_OK ){
-        return ERROR_PACK_RECV_HEADER_LENGTH;
+        return ret;
     }
 
     int bytesReceived;
@@ -84,6 +85,7 @@ retcode_t NetPack::receiveFrom(NetPack::SockType& sock){
     poco_debug(logger_,"receive payload succeed!");
 
     payload_.assign(buf.begin(), buf.size() );
+    this->messageName_ = header_.messagename();
     this->payloadType_ = header_.payloadtype();
     return ERROR_OK;
 }
@@ -129,8 +131,15 @@ retcode_t NetPack::sendHeaderLength(SockType& sock) const{
 
 retcode_t NetPack::receiveHeaderLength(SockType& sock, Int32* headerLength){
     Buffer<char>& buf = this->headerLengthBuf_;
-    if( sizeof(Int32) != sock.receiveBytes(buf.begin(), buf.size() ) ){
-        return ERROR_PACK_RECV_HEADER_LENGTH;
+    int nCount = sock.receiveBytes(buf.begin(), buf.size() );
+    if( nCount != sizeof(Int32) ){
+        if( nCount == 0 ){
+            //graceful shotdown by client
+            return ERROR_NET_GRACEFUL_SHUTDOWN;
+        }else{
+            //unknown error
+            return ERROR_PACK_RECV_HEADER_LENGTH;
+        }
     }
     *headerLength = Poco::ByteOrder::fromNetwork( *(reinterpret_cast<Int32*>(buf.begin())) );
     return ERROR_OK;

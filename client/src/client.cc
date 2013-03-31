@@ -14,8 +14,15 @@ using namespace TrackerProto;
 
 namespace CoolDown{
     namespace Client{
+            CoolClient::CoolClient(int argc, char* argv[])
+            :Application(argc, argv){
+            }
 
             void CoolClient::initialize(Application& self){
+                loadConfiguration();
+                Application::initialize(self);
+
+                setLogger(Logger::get("ConsoleLogger"));
                 this->init_error_ = false;
                 this->clientid_ = Poco::Environment::nodeId();
                 string msg;
@@ -30,7 +37,6 @@ namespace CoolDown{
                     poco_error_f1(logger(), "Got exception in initialize : %s.", msg);
                     this->init_error_ = true;
                 }
-                Application::initialize(self);
             }
 
             void CoolClient::uninitialize(){
@@ -71,6 +77,7 @@ namespace CoolDown{
                 msg.set_clientid(this->clientid());
                 msg.set_fileid(fileid);
                 NetPack req(PAYLOAD_PUBLISH_RESOURCE, msg);
+                poco_notice_f1(logger(), "Header debug string : \n%s", req.debug_string());
                 retcode_t ret = req.sendBy(*sock);
                 SharedPtr<MessageReply> r;
                 string error_msg("Unknown");
@@ -94,11 +101,14 @@ namespace CoolDown{
                     error_msg = "Invalid return code from tracker";
                     goto err;
                 }
+                return ERROR_OK;
 err:
-                poco_warning_f4(logger(), "in publish_resource_to_tracker: %s, ret:%d, tracker addr:%s, fileid:%s.", error_msg, ret, tracker_address, fileid);
+                poco_warning_f4(logger(), "in publish_resource_to_tracker: %s, ret:%d, tracker addr:%s, fileid:%s.", 
+                        error_msg, ret, tracker_address, fileid);
                 return ret;
 
             }
+
             retcode_t CoolClient::report_progress(const string& tracker_address, const string& fileid, int percentage){
                 LocalSockManager::SockPtr sock( sockManager_->get_tracker_sock(tracker_address) );
                 ReportProgress msg;
@@ -129,6 +139,7 @@ err:
                     error_msg = "Invalid return code from tracker";
                     goto err;
                 }
+                return ERROR_OK;
 err:
                 poco_warning_f4(logger(), "in report_progress: %s, ret:%d, tracker addr:%s, fileid:%s", 
                         error_msg, ret, tracker_address, fileid);

@@ -12,7 +12,7 @@ using CoolDown::Client::CoolClient;
 
 int main(int argc, char* argv[]){
     try{
-        CoolClient c;
+        CoolClient c(argc, argv);
         return c.run();
     }catch(Exception& e){
         cerr << e.message() << endl;

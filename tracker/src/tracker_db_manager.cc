@@ -232,7 +232,7 @@ retcode_t TrackerDBManager::init_file_owner_info_table(){
         session_ << "CREATE TABLE IF NOT EXISTS " << fileOwnerTableName << "("
                    "id INTEGER PRIMARY KEY AUTO_INCREMENT,"
                    "FILEID VARCHAR(40),"
-                   "NODEID VARCHAR(40),"
+                   "CLIENTID VARCHAR(40),"
                    "PERCENTAGE INTEGER"
                    ");", now;
     }catch(Exception& e){

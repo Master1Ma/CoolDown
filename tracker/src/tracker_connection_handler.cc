@@ -6,6 +6,8 @@
 #include <Poco/Logger.h>
 #include <google/protobuf/descriptor.h>
 #include <Poco/Exception.h>
+#include <iostream>
+using namespace std;
 
 using Poco::Util::Application;
 using Poco::Exception;
@@ -45,9 +47,13 @@ void TrackerConnectionHandler::onReadable(const AutoPtr<ReadableNotification>& p
     int ret = pack.receiveFrom( sock_ );
 
     if( ret ){
-        poco_warning_f2(logger_, "pack.receiveFrom error! ret : %d, remote addr : %s.", 
-                ret, sock_.peerAddress().toString());
-        goto err;
+        if( ret == ERROR_NET_GRACEFUL_SHUTDOWN ){
+            poco_warning_f1(logger_, "shutdown by remote peer : %s.", sock_.peerAddress().toString() );
+        }else{
+            poco_warning_f2(logger_, "pack.receiveFrom error! ret : %d, remote addr : %s.", 
+                    ret, sock_.peerAddress().toString());
+        }
+            goto err;
     }
 
     poco_notice_f1(logger_, "header : \n%s", pack.debug_string() );
@@ -55,11 +61,14 @@ void TrackerConnectionHandler::onReadable(const AutoPtr<ReadableNotification>& p
     this->Process(pack, &retMsg);
 
     ret = retMsg.sendBy( sock_ );
-    if( ret ){
+    if( ret != ERROR_OK ){
         poco_warning_f2( logger_, "pack.sendBy error ! ret : %d, remote addr : %s.", 
                 ret, sock_.peerAddress().toString() );
         goto err;
+    }else{
+        poco_notice_f1( logger_, "process 1 request from %s", sock_.peerAddress().toString() );
     }
+    return;
 
 err:
     delete this;

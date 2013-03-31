@@ -55,7 +55,16 @@ void Tracker::initialize(Application& self)
 {
     loadConfiguration(); // load default configuration files, if present
     ServerApplication::initialize(self);
-    logger().setLevel("debug");
+
+    /*
+    Logger* pLogger = Logger::has("ConsoleLogger");
+    if( pLogger == NULL ){
+        poco_error(logger(), "No ConsoleLogger found!");
+    }else{
+        setLogger( *pLogger );
+        poco_notice(logger(), "ConsoleLogger set succeed.");
+    }
+    */
     Poco::Data::MySQL::Connector::registerConnector();
     dbManager_.assign(new TrackerDBManager);
     if( dbManager_.isNull() ){
@@ -71,12 +80,26 @@ void Tracker::uninitialize()
 
 int Tracker::main(const std::vector<std::string>& args)
 {
+        if( !isInteractive() ){
+            setLogger( Logger::get("FileLogger") );
+        }else{
+            setLogger( Logger::get("ConsoleLogger") );
+        }
+
     try{
-        unsigned short port = (unsigned short) config().getInt("TrackerServer.port", 9977);
+        unsigned short port = (unsigned short) config().getInt("Tracker.port", 9977);
 
         ServerSocket svs(port);
+        svs.setReusePort(false);
+#if 0
+        ServerSocket svs;
+        svs.setReusePort(false);
+        svs.bind(port);
+#endif
+
         SocketReactor reactor;
         SocketAcceptor<TrackerConnectionHandler> acceptor(svs, reactor);
+
 
         Thread thread;
         thread.start(reactor);
@@ -86,8 +109,9 @@ int Tracker::main(const std::vector<std::string>& args)
         reactor.stop();
         thread.join();
 
-}catch(Exception& e){
-        std::cout << e.what() << std::endl;
+    }catch(Exception& e){
+        poco_error_f1(logger(), "Got exception in Tracker::main : %s", e.message());
+        return Application::EXIT_TEMPFAIL;
     }
     return Application::EXIT_OK;
 }

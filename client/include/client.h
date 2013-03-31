@@ -16,6 +16,7 @@ namespace CoolDown{
 
             class CoolClient : public Application{
                 public:
+                    CoolClient(int argc, char* argv[]);
                     const static unsigned int TRACKER_PORT = 9977;
                     typedef vector<string> ClientIdCollection;
                     typedef LocalSockManager::LocalSockManagerPtr LocalSockManagerPtr;
