@@ -82,10 +82,10 @@ retcode_t TrackerDBManager::search_near_percentage_client(const string& fileid, 
     "SELECT * FROM "
     "("
     "(SELECT CLIENTID,IP,MESSAGEPORT,PERCENTAGE FROM %[0]s INNER JOIN %[1]s "
-    "WHERE %[1]s.FILEID=%[2]s AND %[0]s.CLIENTID=%[1]s.CLIENTID AND %[0]s.ISONLINE=1 AND %[1]s.PERCENTAGE <= %[3]d ORDER BY PERCENTAGE DESC) AS GREATER_RECORDS " 
+    "WHERE %[1]s.FILEID='%[2]s' AND %[0]s.CLIENTID=%[1]s.CLIENTID AND %[0]s.ISONLINE=1 AND %[1]s.PERCENTAGE <= %[3]d ORDER BY PERCENTAGE DESC) AS GREATER_RECORDS " 
     "UNION ALL "
     "(SELECT CLIENTID,IP,MESSAGEPORT,PERCENTAGE FROM %[0]s INNER JOIN %[1]s "
-    "WHERE %[1]s.FILEID=%[2]s AND %[0]s.CLIENTID=%[1]s.CLIENTID AND %[0]s.ISONLINE=1 AND %[1]s.PERCENTAGE > %[3]d ORDER BY PERCENTAGE ASC ) AS LESS_EQUAL_RECORDS"
+    "WHERE %[1]s.FILEID='%[2]s' AND %[0]s.CLIENTID=%[1]s.CLIENTID AND %[0]s.ISONLINE=1 AND %[1]s.PERCENTAGE > %[3]d ORDER BY PERCENTAGE ASC ) AS LESS_EQUAL_RECORDS"
     ") AS RECORDS WHERE PERCENTAGE != 0 ", clientInfoTableName_, fileOwnerTableName_, fileid, percentage);
 
     Statement select(session_);
@@ -93,7 +93,7 @@ retcode_t TrackerDBManager::search_near_percentage_client(const string& fileid, 
     ClientIdCollection::const_iterator iter = clientids.begin();
     ClientIdCollection::const_iterator end = clientids.end();
     while( iter != end ){
-        sql.append( format("AND %s.CLIENTID != %s", fileOwnerTableName_, *iter) );
+        sql.append( format("AND %s.CLIENTID != '%s'", fileOwnerTableName_, *iter) );
         ++iter;
     }
     sql.append( format(" LIMIT %d", needCount) );
@@ -148,15 +148,15 @@ retcode_t TrackerDBManager::search_percentage_raw(SearchType type, const string&
     //%[0]s -> clientInfoTableName_, %[1]s -> fileOwnerTableName_
     //%[2]s -> fileid, %[3]d -> percentage, %[4]s -> SearchType
     //return 4 cols, ie clientid, ip, messageport, percentage
-    format(sql, "SELECT CLIENTID,IP,MESSAGEPORT,PERCENTAGE FROM %[0]s INNER JOIN %[1]s "
-            "WHERE %[1]s.FILEID=%[2]s AND %[0]s.CLIENTID=%[1]s.CLIENTID AND %[0]s.ISONLINE=1 AND %[1]s.PERCENTAGE %[4]s %[3]d ", clientInfoTableName_, fileOwnerTableName_, fileid, percentage, typeString);
+    format(sql, "SELECT %[0]s.CLIENTID,IP,MESSAGEPORT,PERCENTAGE FROM %[0]s INNER JOIN %[1]s "
+            "WHERE %[1]s.FILEID='%[2]s' AND %[0]s.CLIENTID=%[1]s.CLIENTID AND %[0]s.ISONLINE=1 AND %[1]s.PERCENTAGE %[4]s %[3]d ", clientInfoTableName_, fileOwnerTableName_, fileid, percentage, typeString);
 
     Statement select(session_);
 
     ClientIdCollection::const_iterator iter = clientids.begin();
     ClientIdCollection::const_iterator end = clientids.end();
     while( iter != end ){
-        sql.append( format("AND %s.CLIENTID != %s", fileOwnerTableName_, *iter) );
+        sql.append( format("AND %s.CLIENTID != '%s'", fileOwnerTableName_, *iter) );
         ++iter;
     }
 

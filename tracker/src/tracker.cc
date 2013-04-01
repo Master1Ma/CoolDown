@@ -136,6 +136,8 @@ retcode_t Tracker::RequestClients(const string& fileid, int percentage, int need
         return ERROR_UNKNOWN;
     }
     /*
+    return dbManager_->search_near_percentage_client(fileid, percentage, needCount, ownedClientIdList, clients);
+    */
     retcode_t ret = dbManager_->search_greater_percentage(fileid, percentage, needCount, ownedClientIdList, clients);
     if( ret != ERROR_OK ){
         return ret;
@@ -147,8 +149,6 @@ retcode_t Tracker::RequestClients(const string& fileid, int percentage, int need
         }
     }
     return ERROR_OK;
-    */
-    return dbManager_->search_near_percentage_client(fileid, percentage, needCount, ownedClientIdList, clients);
 }
 
 retcode_t Tracker::ReportProgress(const string& clientid, const string& fileid, int percentage){

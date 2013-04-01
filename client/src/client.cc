@@ -118,6 +118,7 @@ namespace CoolDown{
                 }
                 SharedPtr<QueryPeerReply> r;
                 retcode_t ret = handle_reply_message< QueryPeerReply >( sock, msg, PAYLOAD_REQUEST_PEER, &r);
+                poco_notice_f1(logger(), "Recv %d clients by QueryPeer.", r->info().size());
                 return ret;
             }
 
