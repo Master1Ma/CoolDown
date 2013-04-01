@@ -101,6 +101,11 @@ SharedPtr<Message> NetPack::message() const{
         if (prototype)
         {
             message = prototype->New();
+            if( false == message->ParseFromString( this->payload_ ) ){
+                poco_warning_f1(logger_, "Cannot parse message from payload in NetPack::message at line : %d", __LINE__);
+                delete message;
+                message = NULL;
+            }
         }
     }
     return SharedPtr<Message>(message);

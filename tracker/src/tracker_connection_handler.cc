@@ -57,6 +57,7 @@ void TrackerConnectionHandler::onReadable(const AutoPtr<ReadableNotification>& p
     }
 
     poco_notice_f1(logger_, "header : \n%s", pack.debug_string() );
+    //poco_notice_f1(logger_, "Message DebugString : \n%s", pack.message()->DebugString() );
 
     this->Process(pack, &retMsg);
 
@@ -66,7 +67,8 @@ void TrackerConnectionHandler::onReadable(const AutoPtr<ReadableNotification>& p
                 ret, sock_.peerAddress().toString() );
         goto err;
     }else{
-        poco_notice_f1( logger_, "process 1 request from %s", sock_.peerAddress().toString() );
+        poco_notice_f2( logger_, "process 1 request from %s, payload type : %d", 
+                sock_.peerAddress().toString(), pack.payloadtype() );
     }
     return;
 
@@ -83,9 +85,14 @@ void TrackerConnectionHandler::onShutdown(const AutoPtr<ShutdownNotification>& p
 
 void TrackerConnectionHandler::Process(const NetPack& in, NetPack* out){
     SharedPtr<Message> m = in.message();
+    if( m.isNull() ){
+        poco_warning_f1(logger_, "Cannot get message from netpack in. debug_string : \n%s", in.debug_string());
+        return;
+    }
     MessageReply mr;
     mr.set_returncode(ERROR_UNKNOWN);
     QueryPeerReply qpr;
+    qpr.set_returncode(ERROR_UNKNOWN);
     try{
 
         switch( in.payloadtype() ){
@@ -131,6 +138,7 @@ retcode_t TrackerConnectionHandler::HandleLogin(SharedPtr<Message> in, MessageRe
     }
 
     string ip = loginProto->has_loginip() ? loginProto->loginip() : sock_.peerAddress().toString();
+    this->clientid = loginProto->clientid();
     Tracker::ClientPtr client( new ClientInfo(loginProto->clientid(), ip, loginProto->messageport()) );
     ret = app_.AddOnlineUser(client);
 
@@ -152,6 +160,11 @@ retcode_t TrackerConnectionHandler::HandleLogOut(SharedPtr<Message> in, MessageR
     if( logoutProto.isNull() ){
         return ERROR_PROTO_TYPE_ERROR;
     }
+    if( logoutProto->clientid() != this->clientid ){
+        poco_warning_f2(logger_, "Logout clientid doesn't fit the login client id. client id :%s, client ip :%s",
+                this->clientid, sock_.peerAddress().toString() );
+        return ERROR_UNKNOWN;
+    }
     ret = app_.RemoveOnlineUser(logoutProto->clientid());
     if( ret != ERROR_OK ){
         poco_warning_f3(logger_,"Cannot remove online user, client id : %s, client ip : %s, retCode : %d.", 
@@ -168,16 +181,22 @@ retcode_t TrackerConnectionHandler::HandleRequestPeer(SharedPtr<Message> in, Que
     if( queryProto.isNull() ){
         return ERROR_PROTO_TYPE_ERROR;
     }
+    poco_notice_f1(logger_, "fileid=%s", queryProto->fileid());
+    poco_notice_f1(logger_, "percentage=%d", queryProto->percentage());
+    poco_notice_f1(logger_, "needcount=%d", queryProto->needcount());
 
     out->set_fileid( queryProto->fileid() );
 
     Tracker::ClientIdCollection idCollection( queryProto->ownedclients().begin(), queryProto->ownedclients().end() );
+    //add this clientid to known client lists
+    idCollection.push_back(this->clientid);
+
     Tracker::ClientFileInfoCollection fileInfoCollection;
 
     ret = app_.RequestClients(queryProto->fileid(), queryProto->percentage(), queryProto->needcount(), 
             idCollection, &fileInfoCollection); 
     if( ret != ERROR_OK ){
-        out->set_count(-1);
+        out->set_count(0);
         poco_warning_f4(logger_,"Cannot request clients, file id : %s, percentage : %d, need count : %d, client ip : %s", 
                 queryProto->fileid(), queryProto->percentage(), queryProto->needcount(), sock_.peerAddress().toString());
         return ret;
@@ -194,6 +213,7 @@ retcode_t TrackerConnectionHandler::HandleRequestPeer(SharedPtr<Message> in, Que
         info->set_percentage( v.second->percentage() );
     }
 
+    out->set_returncode(ERROR_OK);
     return ERROR_OK;
 }
 

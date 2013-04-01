@@ -132,6 +132,9 @@ retcode_t Tracker::RemoveOnlineUser(const string& clientid){
 retcode_t Tracker::RequestClients(const string& fileid, int percentage, int needCount,
         const ClientIdCollection& ownedClientIdList, ClientFileInfoCollection* clients){
     clients->clear();
+    if( fileid.empty() || percentage < 0 || percentage > 100 || needCount < 0 || clients == NULL){
+        return ERROR_UNKNOWN;
+    }
     /*
     retcode_t ret = dbManager_->search_greater_percentage(fileid, percentage, needCount, ownedClientIdList, clients);
     if( ret != ERROR_OK ){

@@ -23,6 +23,7 @@ namespace CoolDown{
                 Application::initialize(self);
 
                 setLogger(Logger::get("ConsoleLogger"));
+                poco_debug(logger(), "test ConsoleLogger in initialize.");
                 this->init_error_ = false;
                 this->clientid_ = Poco::Environment::nodeId();
                 string msg;
@@ -52,22 +53,32 @@ namespace CoolDown{
                 this->login_tracker(tracker_address);
                 this->publish_resource_to_tracker(tracker_address, fileid);
                 this->report_progress(tracker_address, fileid, 25);
+                ClientIdCollection c;
+                this->request_clients(tracker_address, fileid, 20, 90, c);
                 return Application::EXIT_OK;
             }
 
             retcode_t CoolClient::login_tracker(const string& tracker_address, int port){
-                retcode_t ret = sockManager_->login_tracker(tracker_address, port);
+                retcode_t ret = sockManager_->connect_tracker(tracker_address, port);
                 if( ret != ERROR_OK ){
-                    poco_warning_f3(logger(), "Cannot login tracker, ret : %hd, addr : %s, port : %d.", ret, tracker_address, port);
+                    poco_warning_f3(logger(), "Cannot connect tracker, ret : %hd, addr : %s, port : %d.", ret, tracker_address, port);
+                    return ret;
                 }
+                LocalSockManager::SockPtr sock( sockManager_->get_tracker_sock( tracker_address ) );
+                Login msg;
+                msg.set_clientid( this->clientid() );
+                SharedPtr<MessageReply> r;
+
+                ret = handle_reply_message<MessageReply>( sock, msg, PAYLOAD_LOGIN, &r);
                 return ret;
             }
 
             retcode_t CoolClient::logout_tracker(const string& tracker_address, int port){
-                retcode_t ret = sockManager_->logout_tracker(tracker_address, port);
-                if( ret != ERROR_OK ){
-                    poco_warning_f3(logger(), "Cannot logout tracker, ret : %d, addr : %s, port : %d.", ret, tracker_address, port);
-                }
+                LocalSockManager::SockPtr sock( sockManager_->get_tracker_sock(tracker_address) );
+                Logout msg;
+                msg.set_clientid( this->clientid() );
+                SharedPtr<MessageReply> r;
+                retcode_t ret = handle_reply_message<MessageReply>( sock, msg, PAYLOAD_LOGOUT, &r);
                 return ret;
             }
 
@@ -76,35 +87,8 @@ namespace CoolDown{
                 PublishResource msg;
                 msg.set_clientid(this->clientid());
                 msg.set_fileid(fileid);
-                NetPack req(PAYLOAD_PUBLISH_RESOURCE, msg);
-                poco_notice_f1(logger(), "Header debug string : \n%s", req.debug_string());
-                retcode_t ret = req.sendBy(*sock);
                 SharedPtr<MessageReply> r;
-                string error_msg("Unknown");
-                if( ret != ERROR_OK ){
-                    error_msg = "Cannot publish resource";
-                    goto err;
-                }
-                ret = req.receiveFrom(*sock);
-                if( ret != ERROR_OK){
-                    error_msg = "Cannot receive comfirm message from tracker";
-                    goto err;
-                }
-
-                r = req.message().cast<MessageReply>();
-                if( r.isNull() ){
-                    error_msg = "Cannot cast retrun message to MessageReply type";
-                    goto err;
-                }
-
-                if( r->returncode() != ERROR_OK ){
-                    error_msg = "Invalid return code from tracker";
-                    goto err;
-                }
-                return ERROR_OK;
-err:
-                poco_warning_f4(logger(), "in publish_resource_to_tracker: %s, ret:%d, tracker addr:%s, fileid:%s.", 
-                        error_msg, ret, tracker_address, fileid);
+                retcode_t ret = handle_reply_message<MessageReply>( sock, msg, PAYLOAD_PUBLISH_RESOURCE, &r);
                 return ret;
 
             }
@@ -115,39 +99,62 @@ err:
                 msg.set_clientid( this->clientid() );
                 msg.set_fileid( fileid );
                 msg.set_percentage( percentage );
-                NetPack req(PAYLOAD_REPORT_PROGRESS, msg);
-                retcode_t ret = req.sendBy(*sock);
                 SharedPtr<MessageReply> r;
-                string error_msg("Unknown");
-                if( ret != ERROR_OK ){
-                    error_msg = "Cannot report progress";
-                    goto err;
-                }
-                ret = req.receiveFrom(*sock);
-                if( ret != ERROR_OK){
-                    error_msg = "Cannot receive comfirm message from tracker";
-                    goto err;
-                }
-
-                r = req.message().cast<MessageReply>();
-                if( r.isNull() ){
-                    error_msg = "Cannot cast retrun message to MessageReply type";
-                    goto err;
-                }
-
-                if( r->returncode() != ERROR_OK ){
-                    error_msg = "Invalid return code from tracker";
-                    goto err;
-                }
-                return ERROR_OK;
-err:
-                poco_warning_f4(logger(), "in report_progress: %s, ret:%d, tracker addr:%s, fileid:%s", 
-                        error_msg, ret, tracker_address, fileid);
+                retcode_t ret = handle_reply_message<MessageReply>(sock, msg, PAYLOAD_REPORT_PROGRESS, &r);
                 return ret;
             }
+
             retcode_t CoolClient::request_clients(const string& tracker_address, const string& fileid, int currentPercentage, 
                 int needCount, const ClientIdCollection& clientids){
-                return ERROR_OK;
+                LocalSockManager::SockPtr sock( sockManager_->get_tracker_sock(tracker_address ));
+                QueryPeer msg;
+                msg.set_fileid(fileid);
+                msg.set_percentage(currentPercentage);
+                msg.set_needcount(needCount);
+                ClientIdCollection::const_iterator iter = clientids.begin();
+                while( iter != clientids.end() ){
+                    msg.add_ownedclients(*iter);
+                    ++iter;
+                }
+                SharedPtr<QueryPeerReply> r;
+                retcode_t ret = handle_reply_message< QueryPeerReply >( sock, msg, PAYLOAD_REQUEST_PEER, &r);
+                return ret;
+            }
+
+            template<typename ReplyMessageType>
+            retcode_t CoolClient::handle_reply_message(LocalSockManager::SockPtr& sock, 
+                    const Message& msg, int payload_type, SharedPtr<ReplyMessageType>* out){
+
+                    NetPack req(payload_type, msg);
+                    poco_information_f1(logger(), "pack to send : \n%s", req.debug_string());
+                    retcode_t ret = req.sendBy(*sock);
+                    string error_msg("Unknown");
+                    if( ret != ERROR_OK ){
+                        error_msg = format("cannot send request, payload type=%d", payload_type);
+                        goto err;
+                    }
+                    ret = req.receiveFrom(*sock);
+                    if( ret != ERROR_OK){
+                        error_msg = "Cannot receive comfirm message from tracker";
+                        goto err;
+                    }
+
+                    *out = req.message().cast<ReplyMessageType>();
+                    if( out->isNull() ){
+                        error_msg = "Cannot cast retrun message to certain type";
+                        goto err;
+                    }
+
+                    if( (*out)->returncode() != ERROR_OK ){
+                        error_msg = "Invalid return code from tracker";
+                        goto err;
+                    }
+                    return ERROR_OK;
+    err:
+                    poco_warning_f3(logger(), "in handle_reply_message: %s, ret:%d, remote addr:%s", 
+                            error_msg, ret, sock->peerAddress().toString());
+                    return ret;
+                
             }
 
             string CoolClient::clientid() const{

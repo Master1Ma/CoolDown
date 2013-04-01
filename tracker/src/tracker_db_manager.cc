@@ -41,7 +41,7 @@ retcode_t TrackerDBManager::insert_or_update_login_info(const string& clientid, 
     int init_download_total = 0;
     format(sql, "INSERT INTO %s (CLIENTID, IP, MESSAGEPORT, UPLOADTOTAL, DOWNLOADTOTAL, CREATETIME, LASTLOGINTIME, ISONLINE) "
             "VALUES(?,?,?,?,?,?,?,1) "
-            "ON DUPLICATE KEY UPDATE IP=VALUES(IP), MESSAGEPORT=VALUES(MESSAGEPORT), LOGINTIME=VALUES(LOGINTIME), ISONLINE=1", clientInfoTableName_);
+            "ON DUPLICATE KEY UPDATE IP=VALUES(IP), MESSAGEPORT=VALUES(MESSAGEPORT), LASTLOGINTIME=VALUES(LASTLOGINTIME), ISONLINE=1", clientInfoTableName_);
     session_ << sql, use(clientid), use(ip), use(port), use(init_upload_total), 
              use(init_download_total), use(loginTime), use(loginTime), now;
     return ERROR_OK;

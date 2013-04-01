@@ -19,7 +19,7 @@ namespace CoolDown{
         }
 
 
-        retcode_t LocalSockManager::login_tracker(const string& tracker_address, int port){
+        retcode_t LocalSockManager::connect_tracker(const string& tracker_address, int port){
             SockPtr tracker_sock(new StreamSocket);
             try{
                 tracker_sock->connect( SocketAddress(tracker_address, port) );

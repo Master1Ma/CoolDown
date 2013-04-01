@@ -54,6 +54,7 @@ class TrackerConnectionHandler
         /*
         */
 
+        string clientid;
         StreamSocket sock_;
         SocketReactor& reactor_;
         Logger& logger_;

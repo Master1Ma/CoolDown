@@ -18,11 +18,11 @@ message QueryPeer{
     repeated string OwnedClients = 4;
 }
 
-//Count = -1 means that the tracker doesn't track the file at all.
 message QueryPeerReply{
-    required string FileId = 1;
-    required int32 Count = 2;
-    repeated PeerFileInfo Info = 3;
+    required int32 ReturnCode = 1;
+    required string FileId = 2;
+    required int32 Count = 3;
+    repeated PeerFileInfo Info = 4;
 }
 
 message Login{

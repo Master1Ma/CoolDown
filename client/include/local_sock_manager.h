@@ -28,7 +28,7 @@ namespace CoolDown{
             LocalSockManager();
             ~LocalSockManager();
 
-            retcode_t login_tracker(const string& tracker_address, int port);
+            retcode_t connect_tracker(const string& tracker_address, int port);
             retcode_t logout_tracker(const string& tracker_address, int port);
             retcode_t connect_client(const ClientInfo& info);
             retcode_t close_connection(const string& clientid);

@@ -6,6 +6,8 @@
 #include <vector>
 #include <string>
 #include <Poco/Util/Application.h>
+#include <google/protobuf/message.h>
+using google::protobuf::Message;
 
 using std::vector;
 using std::string;
@@ -34,6 +36,11 @@ namespace CoolDown{
                     string clientid() const;
 
                 private:
+
+                    template<typename ReplyMessageType>
+                    retcode_t handle_reply_message(LocalSockManager::SockPtr& sock, 
+                    const Message& msg, int payload_type, SharedPtr<ReplyMessageType>* out);
+
                     bool init_error_;
                     string clientid_;
                     LocalSockManagerPtr sockManager_;
