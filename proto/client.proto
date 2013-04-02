@@ -1,0 +1,23 @@
+package ClientProto;
+
+message FileInfo{
+    required string FileId = 1;
+    required int32 HasFile = 2;
+    required int32 Percentage = 3;
+    repeated uint64 FileBit = 4;
+}
+
+message ShakeHand{
+    required string ClientId = 1;
+    required FileInfo Info = 2;
+}
+
+message UploadRequest{
+    required string ClientId = 1; 
+    required string FileId = 2;
+    required int64 ChunkNumber = 3;
+}
+
+message UploadReply{
+    required int32 ReturnCode = 1;
+}

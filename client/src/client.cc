@@ -50,11 +50,12 @@ namespace CoolDown{
                 }
                 string tracker_address("localhost");
                 string fileid("1234567890");
-                this->login_tracker(tracker_address);
-                this->publish_resource_to_tracker(tracker_address, fileid);
-                this->report_progress(tracker_address, fileid, 25);
-                ClientIdCollection c;
-                this->request_clients(tracker_address, fileid, 20, 90, c);
+                if( ERROR_OK == this->login_tracker(tracker_address) ){
+                    this->publish_resource_to_tracker(tracker_address, fileid);
+                    this->report_progress(tracker_address, fileid, 25);
+                    ClientIdCollection c;
+                    this->request_clients(tracker_address, fileid, 20, 90, c);
+                }
                 return Application::EXIT_OK;
             }
 
@@ -75,6 +76,9 @@ namespace CoolDown{
 
             retcode_t CoolClient::logout_tracker(const string& tracker_address, int port){
                 LocalSockManager::SockPtr sock( sockManager_->get_tracker_sock(tracker_address) );
+                if( sock.isNull() ){
+                    return ERROR_NET_CONNECT;
+                }
                 Logout msg;
                 msg.set_clientid( this->clientid() );
                 SharedPtr<MessageReply> r;
@@ -84,6 +88,9 @@ namespace CoolDown{
 
             retcode_t CoolClient::publish_resource_to_tracker(const string& tracker_address, const string& fileid){
                 LocalSockManager::SockPtr sock( sockManager_->get_tracker_sock(tracker_address) );
+                if( sock.isNull() ){
+                    return ERROR_NET_CONNECT;
+                }
                 PublishResource msg;
                 msg.set_clientid(this->clientid());
                 msg.set_fileid(fileid);
@@ -95,6 +102,9 @@ namespace CoolDown{
 
             retcode_t CoolClient::report_progress(const string& tracker_address, const string& fileid, int percentage){
                 LocalSockManager::SockPtr sock( sockManager_->get_tracker_sock(tracker_address) );
+                if( sock.isNull() ){
+                    return ERROR_NET_CONNECT;
+                }
                 ReportProgress msg;
                 msg.set_clientid( this->clientid() );
                 msg.set_fileid( fileid );
@@ -107,6 +117,9 @@ namespace CoolDown{
             retcode_t CoolClient::request_clients(const string& tracker_address, const string& fileid, int currentPercentage, 
                 int needCount, const ClientIdCollection& clientids){
                 LocalSockManager::SockPtr sock( sockManager_->get_tracker_sock(tracker_address ));
+                if( sock.isNull() ){
+                    return ERROR_NET_CONNECT;
+                }
                 QueryPeer msg;
                 msg.set_fileid(fileid);
                 msg.set_percentage(currentPercentage);

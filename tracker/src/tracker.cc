@@ -157,7 +157,8 @@ retcode_t Tracker::ReportProgress(const string& clientid, const string& fileid, 
 }
 
 retcode_t Tracker::PublishResource(const string& clientid, const string& fileid){
-    return this->ReportProgress(clientid, fileid, 100);
+    FileOwnerInfo info(clientid, fileid, 100);
+    return dbManager_->insert_file_owner_info(info);
 }
 
 string Tracker::get_current_time() const{

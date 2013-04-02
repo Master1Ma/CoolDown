@@ -55,6 +55,7 @@ class TrackerDBManager{
         retcode_t search_less_equal_percentage(const string& fileid, int percentage, int needCount, 
                 const ClientIdCollection& clientids, FileOwnerInfoCollection* c);
 
+        retcode_t insert_file_owner_info(const FileOwnerInfo& info);
         retcode_t update_file_owner_info(const FileOwnerInfo& info);
         retcode_t remove_file_owner_info(const FileOwnerInfo& info);
 

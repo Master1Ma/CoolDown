@@ -38,11 +38,11 @@ class TrackerConnectionHandler
         void onReadable(const AutoPtr<ReadableNotification>& pNotification);
         void onShutdown(const AutoPtr<ShutdownNotification>& pNotification);
 
-        void Process(const NetPack& in, NetPack* out);
 
     private:
         const static size_t BUF_LEN = 1 << 10;
 
+        void Process(const NetPack& in, NetPack* out);
         retcode_t HandleLogin(SharedPtr<Message> in, MessageReply* out);
         retcode_t HandleLogOut(SharedPtr<Message> in, MessageReply* out);
         retcode_t HandleRequestPeer(SharedPtr<Message> in, QueryPeerReply* out);

@@ -180,12 +180,30 @@ retcode_t TrackerDBManager::search_percentage_raw(SearchType type, const string&
     return ERROR_OK;
 }
 
+retcode_t TrackerDBManager::insert_file_owner_info(const FileOwnerInfo& info){
+    FastMutex::ScopedLock lock(mutex_);
+    using namespace Poco::Data;
+    string sql;
+    format(sql, "INSERT INTO %s(FILEID, CLIENTID, PERCENTAGE) VALUES(?,?,?)", fileOwnerTableName_);
+    session_ << sql, use(info.percentage()), use(info.fileid()), use(info.clientid()), now;
+    return ERROR_OK;
+}
+
 retcode_t TrackerDBManager::update_file_owner_info(const FileOwnerInfo& info){
     FastMutex::ScopedLock lock(mutex_);
     using namespace Poco::Data;
     string sql;
     format(sql, "UPDATE %s SET PERCENTAGE=? WHERE FILEID=? AND CLIENTID=?", fileOwnerTableName_);
     session_ << sql, use(info.percentage()), use(info.fileid()), use(info.clientid()), now;
+    return ERROR_OK;
+}
+
+retcode_t TrackerDBManager::remove_file_owner_info(const FileOwnerInfo& info){
+    FastMutex::ScopedLock lock(mutex_);
+    using namespace Poco::Data;
+    string sql;
+    format(sql, "DELETE FROM %s WHERE FILEID=? AND CLIENTID=?", fileOwnerTableName_);
+    session_ << sql, use(info.fileid()), use(info.clientid()), now;
     return ERROR_OK;
 }
 
