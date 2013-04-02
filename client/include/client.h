@@ -3,6 +3,7 @@
 
 #include "error_code.h"
 #include "local_sock_manager.h"
+#include "net_task_manager.h"
 #include <vector>
 #include <string>
 #include <Poco/Util/Application.h>
@@ -26,6 +27,9 @@ namespace CoolDown{
                     void uninitialize();
                     int main(const vector<string>& args);
 
+                    NetTaskManager& download_manager();
+                    NetTaskManager& upload_manager();
+
                     retcode_t login_tracker(const string& tracker_address, int port = TRACKER_PORT);
                     retcode_t logout_tracker(const string& tracker_address, int port = TRACKER_PORT);
                     retcode_t publish_resource_to_tracker(const string& tracker_address, const string& fileid);
@@ -44,6 +48,9 @@ namespace CoolDown{
                     bool init_error_;
                     string clientid_;
                     LocalSockManagerPtr sockManager_;
+                    NetTaskManager downloadManager_;
+                    NetTaskManager uploadManager_;
+
             };
     }
 }

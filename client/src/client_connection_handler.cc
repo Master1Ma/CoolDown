@@ -16,7 +16,7 @@ namespace CoolDown{
         reactor_(reactor),
         app_( dynamic_cast<CoolClient&>(Application::instance()) ),
         logger_( app_.logger() ),
-        uploadTaskManager_(){
+        uploadTaskManager_( app_.upload_manager() ){
             poco_information_f1(logger_, "Connection from %s", peerAddress_);
             reactor_.addEventHandler(sock_, 
                                 NObserver<ClientConnectionHandler, ReadableNotification>(*this, &ClientConnectionHandler::onReadable));

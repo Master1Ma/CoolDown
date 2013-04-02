@@ -10,7 +10,8 @@ namespace CoolDown{
 
         class NetTaskManager : public TaskManager{
             public:
-                NetTaskManager
+                NetTaskManager();
+                ~NetTaskManager();
         };
 
     }

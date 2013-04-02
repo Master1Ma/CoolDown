@@ -58,6 +58,12 @@ namespace CoolDown{
                 }
                 return Application::EXIT_OK;
             }
+            NetTaskManager& CoolClient::download_manager(){
+                return this->downloadManager_;
+            }
+            NetTaskManager& CoolClient::upload_manager(){
+                return this->uploadManager_;
+            }
 
             retcode_t CoolClient::login_tracker(const string& tracker_address, int port){
                 retcode_t ret = sockManager_->connect_tracker(tracker_address, port);
