@@ -12,6 +12,7 @@ namespace CoolDown{
             public:
                 NetTaskManager();
                 ~NetTaskManager();
+
         };
 
     }
