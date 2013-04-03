@@ -1,0 +1,65 @@
+#include "chunk_selector.h"
+#include "local_sock_manager.h"
+#include "job_info.h"
+
+
+namespace CoolDown{
+    namespace Client{
+
+        ChunkSelector::ChunkSelector(JobInfo& info, LocalSockManager& sockManager)
+        :jobInfo_(info), sockManager_(sockManager){
+        }
+        ChunkSelector::~ChunkSelector(){
+        }
+
+        void ChunkSelector::init_queue(){
+            for(int chunk_pos = 0; chunk_pos != jobInfo_.torrentInfo.chunk_count; ++chunk_pos){
+                ChunkInfoPtr info(new ChunkInfo);
+                info->chunk_num = chunk_pos;
+                get_priority(info, 0);
+                chunk_queue_.push(info);
+            }
+        }
+
+        void ChunkSelector::get_priority(ChunkInfoPtr info, int baseline){
+            JobInfo::owner_info_map_t& infoMap = jobInfo_.ownerInfoMap;
+            info->clientLists.clear();
+            info->priority = 0;
+
+            JobInfo::owner_info_map_t::iterator iter = infoMap.begin();
+            while( iter != infoMap.end() ){
+                FileOwnerInfoPtr p = iter->second;
+                if( p->bitmap_ptr->test(info->chunk_num) ){
+                    info->clientLists.push_back(p);
+                }
+                ++iter;
+            }
+            if( info->clientLists.size() == 0 ){
+                info->priority = UNAVAILABLE;
+            }
+            else if( info->clientLists.size() < RARE_COUNT ){
+                info->priority = HIGHEST - info->clientLists.size();
+            }else{
+                info->priority = NORMAL;
+            }
+            info->priority += baseline;
+        }
+        
+        ChunkInfoPtr ChunkSelector::get_chunk(){
+            FastMutex::ScopedLock lock( chunk_queue_mutex_ );
+            ChunkInfoPtr p = chunk_queue_.top();
+            chunk_queue_.pop();
+            return p;
+        }
+        
+        void ChunkSelector::report_chunk(ChunkInfoPtr info){
+            if( info->status != FAILED ){
+                return;
+            }else{
+                get_priority(info, 0-NORMAL);
+                FastMutex::ScopedLock lock( chunk_queue_mutex_ );
+                chunk_queue_.push(info);
+            }
+        }
+    }
+}

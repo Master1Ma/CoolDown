@@ -11,6 +11,7 @@
 
 using std::map;
 using std::string;
+using std::vector;
 using boost::dynamic_bitset;
 using boost::uint64_t;
 using boost::atomic_bool;
@@ -42,27 +43,28 @@ namespace CoolDown{
             int type;
 
             int size_per_chunk;
-            uint64_t chunk_count;
+            int chunk_count;
             StringList chunk_checksum_list;
-        }
+        };
 
         struct FileOwnerInfo{
             FileOwnerInfo()
                 :clientid(INVALID_CLIENTID),
                 ip("") , message_port(0),
-                percentage(0), bitmap(NULL)
+                percentage(0), bitmap_ptr(new file_bitmap_t)
             {
             }
 
             FileOwnerInfo(const string& clientid, const string& ip, int message_port, int percentage)
-                :clientid(clientid), ip(ip), message_port(message_port), percentage(percentage){
+                :clientid(clientid), ip(ip), message_port(message_port), 
+                percentage(percentage), bitmap_ptr(new file_bitmap_t){
                 }
 
             string clientid;
             string ip;
             int message_port;
             int percentage;
-            file_bitmap_ptr bitmap;
+            file_bitmap_ptr bitmap_ptr;
         };
 
         struct DownloadInfo{
@@ -83,11 +85,12 @@ namespace CoolDown{
         typedef SharedPtr<FileOwnerInfo> FileOwnerInfoPtr;
 
         class JobInfo{
-            private:
-                LocalFileInfo localFileInfo_;
-                map<string, FileOwnerInfoPtr> ownerInfoMap_;
-                DownloadInfo downloadInfo_;
-                TorrentInfo torrentInfo_;
+            public:
+                typedef map<string, FileOwnerInfoPtr> owner_info_map_t;
+                LocalFileInfo localFileInfo;
+                owner_info_map_t ownerInfoMap;
+                DownloadInfo downloadInfo;
+                TorrentInfo torrentInfo;
         };
     }
 }
