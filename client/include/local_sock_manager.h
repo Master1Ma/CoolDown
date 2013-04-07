@@ -18,6 +18,7 @@ using Poco::Net::StreamSocket;
 using Poco::SharedPtr;
 using Poco::Logger;
 using Poco::FastMutex;
+using Poco::Net::SocketAddress;
 
 
 namespace Poco{
@@ -65,9 +66,11 @@ namespace CoolDown{
             retcode_t close_connection_to_tracker(const string& tracker_address);
             bool reach_connection_limit(const string& clientid);
 
-            SockPtr get_sock(const string& clientid) const;
+            //SockPtr get_sock(const string& clientid);
             SockPtr get_tracker_sock(const string& tracker_address);
             SockPtr get_idle_client_sock(const string& clientid);
+
+            double get_payload_percentage(const string& clientid);
             
 
             struct IdleSockSelector{
@@ -77,6 +80,7 @@ namespace CoolDown{
             };
 
         private:
+            SockPtr make_connection(const SocketAddress& sa);
             SockPtr make_connection(const string& ip, int port);
             
             const static size_t MAX_CONNECTION_PER_CLIENT = 10;

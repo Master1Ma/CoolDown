@@ -15,6 +15,9 @@ namespace CoolDown{
         Verification::~Verification(){
         }
 
+        FastMutex Verification::mutex_;
+        SHA1Engine Verification::engine_;
+
         string Verification::get_file_verification_code(const string& fullpath) {
             FastMutex::ScopedLock lock(mutex_);
             File f(fullpath);
@@ -35,17 +38,21 @@ namespace CoolDown{
 
         string Verification::get_verification_code(const char* begin, const char* end) {
             FastMutex::ScopedLock lock(mutex_);
-            return this->get_verification_code_without_lock(begin, end);
+            return Verification::get_verification_code_without_lock(begin, end);
+        }
+        string Verification::get_verification_code(const string& content){
+            FastMutex::ScopedLock lock(mutex_);
+            return Verification::get_verification_code(content.data(), content.data()+content.length());
         }
 
         bool Verification::veritify(const char* begin, const char* end, const string& vc) {
             FastMutex::ScopedLock lock(mutex_);
-            return vc == this->get_verification_code_without_lock(begin, end);
+            return vc == Verification::get_verification_code_without_lock(begin, end);
         }
 
         bool Verification::veritify(const string& source, const string& vc) {
             FastMutex::ScopedLock lock(mutex_);
-            return vc == this->get_verification_code_without_lock(source.data(), source.data() + source.length());
+            return vc == Verification::get_verification_code_without_lock(source.data(), source.data() + source.length());
         }
 
         string Verification::get_verification_code_without_lock(const char* begin, const char* end){

@@ -15,18 +15,20 @@ namespace CoolDown{
 
         class Verification{
             public:
-                Verification();
-                ~Verification();
-                string get_file_verification_code(const string& fullpath) ;
-                string get_verification_code(const char* begin, const char* end) ;
-                bool veritify(const char* begin, const char* end, const string& vc) ;
-                bool veritify(const string& source, const string& vc) ;
+                static string get_file_verification_code(const string& fullpath) ;
+                static string get_verification_code(const string& content) ;
+                static string get_verification_code(const char* begin, const char* end) ;
+                static bool veritify(const char* begin, const char* end, const string& vc) ;
+                static bool veritify(const string& source, const string& vc) ;
 
             private:
-                string get_verification_code_without_lock(const char* begin, const char* end);
-                retcode_t calc_piece_verification_code(const char* begin, const char* end);
-                FastMutex mutex_;
-                SHA1Engine engine_;
+                static string get_verification_code_without_lock(const char* begin, const char* end);
+                static retcode_t calc_piece_verification_code(const char* begin, const char* end);
+                static FastMutex mutex_;
+                static SHA1Engine engine_;
+
+                Verification();
+                ~Verification();
         };
     }
 }

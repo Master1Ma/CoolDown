@@ -74,10 +74,13 @@ namespace CoolDown{
         }
 
         SockPtr LocalSockManager::make_connection(const string& ip, int port){
+            return this->make_connection(SocketAddress(ip, port));
+        }
+        SockPtr LocalSockManager::make_connection(const SocketAddress& sa){
             SockPtr sock;
             try{
                 SockPtr tmp(new StreamSocket);
-                tmp->connect( SocketAddress(ip, port) );
+                tmp->connect( sa );
                 sock = tmp;
             }catch(Exception& e){
             }
@@ -99,11 +102,34 @@ namespace CoolDown{
                     IdleSockSelector());
 
             if( sockList.end() == sockIter){
-                return SockPtr();
+                if( sockList.size() > MAX_CONNECTION_PER_CLIENT ){
+                    return SockPtr();
+                }else if( sockList.size() == 0 ){
+                    poco_notice(logger_, "the sock list of %s has no sock at all!");
+                    return SockPtr();
+                }else{
+                    SockPtr prototype = sockList.begin()->first;
+                    poco_notice_f1(logger_, "int get_idle_client_sock, Try make_connection to %s.", prototype->peerAddress().host().toString());
+                    poco_notice(logger_, "make_connection may block...");
+                    SockPtr sock = make_connection(prototype->peerAddress());
+                    return sock;
+                }
+            
             }else{
                 return sockIter->first;
             }
 
+        }
+
+        double LocalSockManager::get_payload_percentage(const string& clientid){
+            FastMutex::ScopedLock lock(client_sock_map_mutex_);
+            client_sock_map_t::iterator listIter = client_sock_map_.find(clientid);
+
+            if( listIter == client_sock_map_.end() ){
+                return (double)100;
+            }else{
+                return (double)listIter->second.size() / MAX_CONNECTION_PER_CLIENT;
+            }
         }
 
         SockPtr LocalSockManager::get_tracker_sock(const string& tracker_address){
