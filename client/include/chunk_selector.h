@@ -45,7 +45,8 @@ namespace CoolDown{
                 ~ChunkSelector();
 
                 ChunkInfoPtr get_chunk();
-                void report_chunk(ChunkInfoPtr info);
+                void report_success_chunk(int chunk_num);
+                void report_failed_chunk(int chunk_num);
 
             private:
                 void init_queue();

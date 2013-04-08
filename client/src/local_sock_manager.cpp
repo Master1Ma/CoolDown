@@ -121,6 +121,23 @@ namespace CoolDown{
 
         }
 
+        void LocalSockManager::return_sock(const string& clientid, SockPtr sock){
+            FastMutex::ScopedLock lock(client_sock_map_mutex_);
+            client_sock_map_t::iterator listIter = client_sock_map_.find(clientid);
+            if( listIter == client_sock_map_.end() ){
+                poco_notice_f1(logger_, "in LocalSockManager::return_sock, cannot find clientid : %s", clientid);
+                return;
+            }
+            SockList& sockList = listIter->second;
+            SockList::iterator iter = find_if(sockList.begin(), sockList.end(), FindSock(sock) );
+            if( iter == sockList.end() ){
+                poco_notice_f2(logger_, "return sock that doesnot belong to client, clientid:%s, peer addr:%s",
+                        clientid, sock->peerAddress().toString());
+                return;
+            }
+            iter->second = IDLE;
+        }
+
         double LocalSockManager::get_payload_percentage(const string& clientid){
             FastMutex::ScopedLock lock(client_sock_map_mutex_);
             client_sock_map_t::iterator listIter = client_sock_map_.find(clientid);

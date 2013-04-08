@@ -69,6 +69,8 @@ namespace CoolDown{
             //SockPtr get_sock(const string& clientid);
             SockPtr get_tracker_sock(const string& tracker_address);
             SockPtr get_idle_client_sock(const string& clientid);
+            void return_sock(const string& clientid, SockPtr sock);
+            
 
             double get_payload_percentage(const string& clientid);
             
@@ -77,6 +79,18 @@ namespace CoolDown{
                 bool operator()(const SockList::value_type& v){
                     return v.second == USED;
                 }
+            };
+
+            struct FindSock{
+                FindSock(const SockPtr& sock)
+                    :sock_(sock){
+                    }
+
+                bool operator()(const SockList::value_type& v){
+                    return v.first == sock_;
+                }
+                private:
+                    SockPtr sock_;
             };
 
         private:

@@ -18,24 +18,26 @@ using namespace ClientProto;
 namespace CoolDown{
     namespace Client{
 
-        DownloadTask::DownloadTask(JobInfo& info, StreamSocket& sock, int chunk_pos, const string& check_sum, const File& file)
-        :Task(format("%s:%d", sock.peerAddress().host().toString(), chunk_pos)), 
-         info_(info), sock_(sock), chunk_pos_(chunk_pos), check_sum_(check_sum), file_(file){
+        DownloadTask::DownloadTask(JobInfo& info, const string& clientid, const SockPtr& sock, 
+                int chunk_pos, const string& check_sum, const File& file)
+        :Task(format("%s:%d", sock->peerAddress().host().toString(), chunk_pos)), 
+         jobInfo_(info), clientid_(clientid), sock_(sock), 
+         chunk_pos_(chunk_pos), check_sum_(check_sum), file_(file), reported_(false){
 
         }
 
         void DownloadTask::runTask(){
             UploadRequest req;
-            req.set_clientid(info_.clientid());
-            req.set_fileid(info_.torrentInfo.fileid);
+            req.set_clientid(jobInfo_.clientid());
+            req.set_fileid(jobInfo_.torrentInfo.fileid);
             req.set_chunknumber(chunk_pos_);
 
             NetPack pack( PAYLOAD_UPLOAD_REQUEST, req );
-            retcode_t ret = pack.sendBy(sock_);
+            retcode_t ret = pack.sendBy(*sock_);
             if( ERROR_OK != ret ){
                 throw Exception( format("Error send upload request. ret : %d", (int)ret) );
             }
-            ret = pack.receiveFrom(sock_);
+            ret = pack.receiveFrom(*sock_);
             if( ERROR_OK != ret ){
                 throw Exception( format("Error recv upload reply. ret : %d", (int)ret) );
             }
@@ -49,33 +51,33 @@ namespace CoolDown{
             }
 
             //chunk_pos ranges from 0~chunk_count-1
-            bool isLastChunk = chunk_pos_ == ( info_.torrentInfo.chunk_count - 1 );
+            bool isLastChunk = chunk_pos_ == ( jobInfo_.torrentInfo.chunk_count - 1 );
             int chunk_size = 0;
             if( isLastChunk ){
-                chunk_size = info_.torrentInfo.file_size - ( info_.torrentInfo.size_per_chunk * info_.torrentInfo.chunk_count - 1);
+                chunk_size = jobInfo_.torrentInfo.file_size - ( jobInfo_.torrentInfo.size_per_chunk * jobInfo_.torrentInfo.chunk_count - 1);
             }else{
-                chunk_size = info_.torrentInfo.size_per_chunk;
+                chunk_size = jobInfo_.torrentInfo.size_per_chunk;
             }
 
             //the size of last chunk must less-equal than the size of normal chunk
-            poco_assert( chunk_size <= info_.torrentInfo.size_per_chunk );
+            poco_assert( chunk_size <= jobInfo_.torrentInfo.size_per_chunk );
 
             string content;
             int nRecv = 0;
             while( nRecv <= chunk_size){
-                if( info_.downloadInfo.is_finished ){
+                if( jobInfo_.downloadInfo.is_finished ){
                     throw Exception("Job Finished.");
                 }
 
-                if( info_.downloadInfo.is_download_paused ){
-                    info_.download_pause_cond.wait(info_.download_pause_mutex);
+                if( jobInfo_.downloadInfo.is_download_paused ){
+                    jobInfo_.download_pause_cond.wait(jobInfo_.download_pause_mutex);
                 }
-                if( info_.downloadInfo.bytes_download_this_second > info_.downloadInfo.upload_speed_limit ){
-                    info_.download_speed_limit_cond.wait(info_.download_speed_limit_mutex);
+                if( jobInfo_.downloadInfo.bytes_download_this_second > jobInfo_.downloadInfo.upload_speed_limit ){
+                    jobInfo_.download_speed_limit_cond.wait(jobInfo_.download_speed_limit_mutex);
                 }else{
                     Buffer<char> recvBuffer(chunk_size);
-                    int n = sock_.receiveBytes(recvBuffer.begin(), recvBuffer.size() );
-                    info_.downloadInfo.bytes_download_this_second += n;
+                    int n = sock_->receiveBytes(recvBuffer.begin(), recvBuffer.size() );
+                    jobInfo_.downloadInfo.bytes_download_this_second += n;
                     nRecv += n;
                     content.append( recvBuffer.begin(), n );
                 }
@@ -91,7 +93,7 @@ namespace CoolDown{
 
             SharedMemory sm(file_, SharedMemory::AM_WRITE);
             //32bits vs 64bits problem???
-            memcpy(sm.begin() + chunk_pos_ * info_.torrentInfo.size_per_chunk, content.data(), content.length() );
+            memcpy(sm.begin() + chunk_pos_ * jobInfo_.torrentInfo.size_per_chunk, content.data(), content.length() );
         }
     }
 }

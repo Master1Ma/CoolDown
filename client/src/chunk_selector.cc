@@ -52,6 +52,7 @@ namespace CoolDown{
             return p;
         }
         
+        /*
         void ChunkSelector::report_chunk(ChunkInfoPtr info){
             if( info->status != FAILED ){
                 return;
@@ -60,6 +61,21 @@ namespace CoolDown{
                 FastMutex::ScopedLock lock( chunk_queue_mutex_ );
                 chunk_queue_.push(info);
             }
+        }
+        */
+        void ChunkSelector::report_success_chunk(int chunk_num){
+            /*
+            ChunkInfoPtr info(new ChunkInfo);
+            info->status = FINISHED;
+            */
+        }
+        void ChunkSelector::report_failed_chunk(int chunk_num){
+            ChunkInfoPtr info(new ChunkInfo);
+            info->status = FAILED;
+            info->chunk_num = chunk_num;
+            get_priority(info, 0 - NORMAL);
+            FastMutex::ScopedLock lock( chunk_queue_mutex_ );
+            chunk_queue_.push(info);
         }
     }
 }
