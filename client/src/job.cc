@@ -82,6 +82,10 @@ namespace CoolDown{
                     jobInfo_.download_pause_cond.wait(jobInfo_.download_pause_mutex);
                 }else{
                     ChunkInfoPtr chunk_info = cs_.get_chunk();
+                    if( chunk_info.isNull() ){
+                        poco_debug(logger_, "Download succeed.");
+                        break;
+                    }
                     vector<double> payloads;
                     payloads.reserve(chunk_info->clientLists.size());
 

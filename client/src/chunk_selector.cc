@@ -47,8 +47,11 @@ namespace CoolDown{
         
         ChunkInfoPtr ChunkSelector::get_chunk(){
             FastMutex::ScopedLock lock( chunk_queue_mutex_ );
-            ChunkInfoPtr p = chunk_queue_.top();
-            chunk_queue_.pop();
+            ChunkInfoPtr p;
+            if( chunk_queue_.size() > 0 ){
+                p = chunk_queue_.top();
+                chunk_queue_.pop();
+            }
             return p;
         }
         
@@ -64,10 +67,8 @@ namespace CoolDown{
         }
         */
         void ChunkSelector::report_success_chunk(int chunk_num){
-            /*
-            ChunkInfoPtr info(new ChunkInfo);
-            info->status = FINISHED;
-            */
+            //mark this chunk succeed.
+            (*(jobInfo_.downloadInfo.bitmap))[chunk_num] = 1;
         }
         void ChunkSelector::report_failed_chunk(int chunk_num){
             ChunkInfoPtr info(new ChunkInfo);
