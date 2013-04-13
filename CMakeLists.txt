@@ -13,7 +13,9 @@ SET( protoc.arg2 "--cpp_out=${CMAKE_SOURCE_DIR}/proto" )
 SET( TrackerProto "${CMAKE_SOURCE_DIR}/proto/tracker.proto")
 SET( NetpackHeaderProto "${CMAKE_SOURCE_DIR}/proto/netpack_header.proto")
 SET( ClientProto "${CMAKE_SOURCE_DIR}/proto/client.proto" )
-EXECUTE_PROCESS( COMMAND ${protoc.cmd} ${protoc.arg} ${protoc.arg2} ${TrackerProto} ${NetpackHeaderProto} ${ClientProto} )
+SET( Torrent "${CMAKE_SOURCE_DIR}/proto/torrent.proto" )
+EXECUTE_PROCESS( COMMAND ${protoc.cmd} ${protoc.arg} ${protoc.arg2} 
+    ${TrackerProto} ${NetpackHeaderProto} ${ClientProto} ${Torrent} )
 
 ADD_SUBDIRECTORY( public )
 ADD_SUBDIRECTORY( tracker )

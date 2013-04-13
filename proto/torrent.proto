@@ -1,0 +1,23 @@
+message Chunk{
+    required string CheckSum = 1;
+    required int32 Size = 2;
+};
+
+message File{
+    required string CheckSum = 1;
+    required string RelativePath = 2;
+    required string Filename = 3;
+    required int32 Type = 4;
+    required int64 Size = 5;
+    repeated Chunk Chunk = 6;
+};
+
+message Torrent{
+    required int32 Type = 1;
+    required int64 TotalSize = 2;
+    required string CreateBy = 3;
+    required string CreateTime = 4;
+    required string TrackerAddress = 5;
+    repeated File File = 6;
+    
+};
