@@ -1,6 +1,7 @@
 #include "verification.h"
 #include <Poco/SharedMemory.h>
 #include <Poco/File.h>
+#include <Poco/Bugcheck.h>
 
 using Poco::DigestEngine;
 using Poco::SharedMemory;
@@ -35,6 +36,20 @@ namespace CoolDown{
             */
             return DigestEngine::digestToHex(engine_.digest());
         }
+        void Verification::get_file_checksum_list(const File& file, int chunk_size, ChecksumList* pList){
+            poco_assert( chunk_size > 0 );
+            poco_assert( pList != NULL );
+            poco_assert( file.exists() );
+
+            FastMutex::ScopedLock lock(mutex_);
+            SharedMemory sm(file, SharedMemory::AM_READ);
+            char* start = sm.begin();
+            while( start + chunk_size < sm.end() ){
+                pList->push_back( get_verification_code_without_lock(start, start + chunk_size ) );
+                start += chunk_size;
+            }
+            pList->push_back( get_verification_code_without_lock(start, sm.end()) );
+        }
 
         string Verification::get_verification_code(const char* begin, const char* end) {
             FastMutex::ScopedLock lock(mutex_);
@@ -56,9 +71,7 @@ namespace CoolDown{
         }
 
         string Verification::get_verification_code_without_lock(const char* begin, const char* end){
-            if( end < begin ){
-                return "";
-            }
+            poco_assert( end >= begin );
             engine_.reset();
             engine_.update(begin, end - begin);
             return DigestEngine::digestToHex(engine_.digest());

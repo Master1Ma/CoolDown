@@ -2,14 +2,22 @@
 #include "payload_type.h"
 #include "netpack.h"
 #include "tracker.pb.h"
+#include "torrent.pb.h"
+#include "verification.h"
+#include <fstream>
 #include <Poco/Logger.h>
 #include <Poco/Exception.h>
 #include <Poco/Util/Application.h>
 #include <Poco/Environment.h>
+#include <Poco/DateTimeFormat.h>
+#include <Poco/DateTimeFormatter.h>
+#include <Poco/LocalDateTime.h>
 
+using std::ofstream;
 using Poco::Logger;
 using Poco::Exception;
 using Poco::Util::Application;
+using Poco::LocalDateTime;
 using namespace TrackerProto;
 
 namespace CoolDown{
@@ -48,6 +56,13 @@ namespace CoolDown{
                 if( this->init_error_ ){
                     return Application::EXIT_TEMPFAIL;
                 }
+                if( args.size() != 2 ){
+                    return Application::EXIT_USAGE;
+                }
+                retcode_t ret = this->make_torrent(args[0], args[1],
+                        1 << 20, 0, "localhost:9977");
+                poco_notice_f1(logger(), "make_torrent retcode : %d", (int)ret);
+                /*
                 string tracker_address("localhost");
                 string fileid("1234567890");
                 if( ERROR_OK == this->login_tracker(tracker_address) ){
@@ -56,6 +71,7 @@ namespace CoolDown{
                     ClientIdCollection c;
                     this->request_clients(tracker_address, fileid, 20, 90, c);
                 }
+                */
                 return Application::EXIT_OK;
             }
             NetTaskManager& CoolClient::download_manager(){
@@ -176,9 +192,113 @@ namespace CoolDown{
                     return ret;
                 
             }
+            retcode_t CoolClient::make_torrent(const Path& path, const Path& torrent_file_path, 
+                    Int32 chunk_size, Int32 type, const string& tracker_address){
+
+                string pathmsg( format("Call make_torrent with path : %s, torrent_file_path : %s", 
+                                    path.toString(), torrent_file_path.toString()
+                                )
+                            );
+                poco_notice_f4(logger(), "%s, chunk_size : %d, type : %d, tracker_address : %s", 
+                        pathmsg, chunk_size, type, tracker_address);
+
+                File f(path);
+                if( !f.exists() ){
+                    return ERROR_FILE_NOT_EXISTS;
+                }
+
+                //fill torrent info
+                Torrent::Torrent torrent;
+                torrent.set_type(type);
+                torrent.set_createby(clientid());
+                torrent.set_createtime(current_time());
+                torrent.set_trackeraddress( tracker_address );
+                Int64 total_size = 0;
+
+                FileList files;
+                if( f.isFile() ){
+                    files.push_back(f);
+                }else{
+                    list_dir_recursive(f, &files);
+                }
+                FileList::iterator iter = files.begin();
+                FileList::iterator end = files.end();
+
+                while( iter != end ){
+                    //Process one File
+                    Path p(iter->path());
+                    string file_check_sum = Verification::get_file_verification_code( iter->path() );
+                    Int64 file_size = iter->getSize();
+                    total_size += file_size;
+                    Verification::ChecksumList checksums;
+                    Verification::get_file_checksum_list(*iter, chunk_size, &checksums);
+                    int last_chunk_size = file_size % chunk_size;
+
+                    //file file info in Torrent
+                    Torrent::File* aFile = torrent.add_file();
+                    aFile->set_relativepath( p.parent().toString() );
+                    aFile->set_filename( p.getFileName() );
+                    aFile->set_size( file_size );
+                    aFile->set_checksum( file_check_sum );
+                    Verification::ChecksumList::iterator checksum_iter = checksums.begin();
+
+                    //Process chunks in a File
+                    while( checksum_iter != checksums.end() ){
+                        int this_chunk_size = ( checksum_iter == checksums.end() -1 ) ? last_chunk_size : chunk_size;
+                        //fill chunk info in File
+                        Torrent::Chunk* aChunk = aFile->add_chunk();
+                        aChunk->set_checksum( *checksum_iter );
+                        aChunk->set_size( this_chunk_size );
+                        ++checksum_iter;
+                    }
+
+                    ++iter;
+                    //call make_torrent_progress_callback_ here
+                }
+
+                torrent.set_totalsize( total_size );
+
+                ofstream ofs( torrent_file_path.toString().c_str() );
+                if( !ofs ){
+                    return ERROR_FILE_CANNOT_CREATE;
+                }
+                poco_assert( torrent.SerializeToOstream(&ofs) );
+                ofs.close();
+
+                return ERROR_OK;
+            }
+
+            string CoolClient::current_time() const{
+                LocalDateTime now;
+                return Poco::DateTimeFormatter::format(now, Poco::DateTimeFormat::HTTP_FORMAT);
+            }
 
             string CoolClient::clientid() const{
                 return this->clientid_;
             }
+
+            void CoolClient::set_make_torrent_progress_callback(make_torrent_progress_callback_t callback){
+                this->make_torrent_progress_callback_ = callback;
+            }
+
+            void CoolClient::list_dir_recursive(const File& file, FileList* pList){
+                FileList files;
+                file.list(files);
+                for(int i = 0; i != files.size(); ++i){
+                    File& file = files[i];
+                    if( file.canRead() == false){
+                        continue;
+                    }
+                    else if( file.isFile() ){
+                        pList->push_back(file);
+                    }
+                    else if( file.isDirectory() ){
+                        list_dir_recursive(file, pList);
+                    }else{
+                        //drop other files
+                    }
+                }
+            }
+
     }
 }

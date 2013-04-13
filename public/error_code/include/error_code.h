@@ -35,6 +35,10 @@ enum retcode_t{
 
     ERROR_VERIFY_INVALID_RANGE = 50001,
 
+    ERROR_FILE_NOT_EXISTS = 60001,
+    ERROR_FILE_EXISTS = 60002,
+    ERROR_FILE_CANNOT_CREATE = 60003,
+
 };
 
 const char* errmsg(retcode_t ret);

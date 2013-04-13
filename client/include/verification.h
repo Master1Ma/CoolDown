@@ -2,12 +2,16 @@
 #define VERIFICATION_H
 
 #include "error_code.h"
+#include <vector>
 #include <string>
 #include <Poco/Mutex.h>
+#include <Poco/File.h>
 #include <Poco/SHA1Engine.h>
 
+using std::vector;
 using std::string;
 using Poco::FastMutex;
+using Poco::File;
 using Poco::SHA1Engine;
 
 namespace CoolDown{
@@ -15,7 +19,9 @@ namespace CoolDown{
 
         class Verification{
             public:
+                typedef vector<string> ChecksumList;
                 static string get_file_verification_code(const string& fullpath) ;
+                static void get_file_checksum_list(const File& file, int chunk_size, ChecksumList* pList);
                 static string get_verification_code(const string& content) ;
                 static string get_verification_code(const char* begin, const char* end) ;
                 static bool veritify(const char* begin, const char* end, const string& vc) ;

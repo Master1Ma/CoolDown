@@ -1,3 +1,5 @@
+package Torrent;
+
 message Chunk{
     required string CheckSum = 1;
     required int32 Size = 2;
@@ -7,9 +9,8 @@ message File{
     required string CheckSum = 1;
     required string RelativePath = 2;
     required string Filename = 3;
-    required int32 Type = 4;
-    required int64 Size = 5;
-    repeated Chunk Chunk = 6;
+    required int64 Size = 4;
+    repeated Chunk Chunk = 5;
 };
 
 message Torrent{
@@ -19,5 +20,5 @@ message Torrent{
     required string CreateTime = 4;
     required string TrackerAddress = 5;
     repeated File File = 6;
-    
+    optional string Introduction = 7;
 };
