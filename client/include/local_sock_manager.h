@@ -28,8 +28,10 @@ namespace Poco{
                 public:
                      static void release(StreamSocket* pObj)
                      {
-                         pObj->close();
-                         delete pObj;
+                         if( pObj ){
+                             pObj->close();
+                             delete pObj;
+                         }
                      }
             };
 }
