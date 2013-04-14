@@ -75,14 +75,6 @@ namespace CoolDown{
 
         typedef SharedPtr<FileOwnerInfo> FileOwnerInfoPtr;
 
-        /*
-        struct PayloadComparer{
-            bool operator()(const FileOwnerInfoPtr& lhs, const FileOwnerInfoPtr& rhs){
-                return lhs->
-            }
-        };
-        */
-
         struct DownloadInfo{
             atomic_bool is_finished;
             atomic_bool is_download_paused;

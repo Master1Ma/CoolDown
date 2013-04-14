@@ -21,6 +21,10 @@ using Poco::File;
 using Poco::Int32;
 using Poco::Int64;
 
+namespace Torrent{
+    class Torrent;
+}
+
 namespace CoolDown{
     namespace Client{
 
@@ -46,6 +50,7 @@ namespace CoolDown{
                     retcode_t request_clients(const string& tracker_address, const string& fileid, int currentPercentage, 
                                           int needCount, const ClientIdCollection& clientids);
                     //retcode_t make_torrent(const Path& path, TorrentInfo&);
+                    retcode_t parse_torrent(const Path& torrent_file_path, Torrent::Torrent* pTorrent);
                     retcode_t make_torrent(const Path& path, const Path& torrent_file_path, 
                             Int32 chunk_size, Int32 type, const string& tracker_address);
 

@@ -13,6 +13,7 @@
 #include <Poco/DateTimeFormatter.h>
 #include <Poco/LocalDateTime.h>
 
+using std::ifstream;
 using std::ofstream;
 using Poco::Logger;
 using Poco::Exception;
@@ -43,7 +44,7 @@ namespace CoolDown{
                     }
                 }
                 catch(Exception& e){
-                    poco_error_f1(logger(), "Got exception in initialize : %s.", msg);
+                    poco_error_f1(logger(), "Got exception in initialize : %s", msg);
                     this->init_error_ = true;
                 }
             }
@@ -56,13 +57,15 @@ namespace CoolDown{
                 if( this->init_error_ ){
                     return Application::EXIT_TEMPFAIL;
                 }
+#if 1
                 if( args.size() != 2 ){
                     return Application::EXIT_USAGE;
                 }
                 retcode_t ret = this->make_torrent(args[0], args[1],
                         1 << 20, 0, "localhost:9977");
                 poco_notice_f1(logger(), "make_torrent retcode : %d", (int)ret);
-                /*
+#endif
+#if 0
                 string tracker_address("localhost");
                 string fileid("1234567890");
                 if( ERROR_OK == this->login_tracker(tracker_address) ){
@@ -71,7 +74,7 @@ namespace CoolDown{
                     ClientIdCollection c;
                     this->request_clients(tracker_address, fileid, 20, 90, c);
                 }
-                */
+#endif
                 return Application::EXIT_OK;
             }
             NetTaskManager& CoolClient::download_manager(){
@@ -265,6 +268,16 @@ namespace CoolDown{
                 poco_assert( torrent.SerializeToOstream(&ofs) );
                 ofs.close();
 
+                return ERROR_OK;
+            }
+
+            retcode_t CoolClient::parse_torrent(const Path& torrent_file_path, Torrent::Torrent* pTorrent){
+                ifstream ifs(torrent_file_path.toString().c_str() );
+                poco_assert(pTorrent != NULL);
+                pTorrent->Clear();
+                if( pTorrent->ParseFromIstream(&ifs) == false){
+                    return ERROR_FILE_PARSE_ERROR;
+                }
                 return ERROR_OK;
             }
 
