@@ -57,7 +57,7 @@ namespace CoolDown{
         }
         string Verification::get_verification_code(const string& content){
             FastMutex::ScopedLock lock(mutex_);
-            return Verification::get_verification_code(content.data(), content.data()+content.length());
+            return Verification::get_verification_code_without_lock(content.data(), content.data()+content.length());
         }
 
         bool Verification::veritify(const char* begin, const char* end, const string& vc) {

@@ -33,7 +33,7 @@ namespace CoolDown{
                 setLogger(Logger::get("ConsoleLogger"));
                 poco_debug(logger(), "test ConsoleLogger in initialize.");
                 this->init_error_ = false;
-                this->clientid_ = Poco::Environment::nodeId();
+                this->clientid_ = Verification::get_verification_code( Poco::Environment::nodeId() );
                 string msg;
                 try{
                     sockManager_.assign( new LocalSockManager );
