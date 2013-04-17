@@ -1,15 +1,16 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
-IF(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-SET(CMAKE_C_COMPILER "gcc") 
-SET(CMAKE_CXX_COMPILER "g++") 
-ELSE()
-SET(CMAKE_C_COMPILER "clang") 
-SET(CMAKE_CXX_COMPILER "clang++") 
-endif()
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
+PROJECT( CoolDown )
+#use gcc/g++ to fix boost::atomic compile error of clang3.0
+#IF( ${CMAKE_SYSTEM_NAME} MATCHES "Linux" )
+#SET(CMAKE_C_COMPILER "gcc") 
+#SET(CMAKE_CXX_COMPILER "g++") 
+#ELSE()
+#SET(CMAKE_C_COMPILER "clang") 
+#SET(CMAKE_CXX_COMPILER "clang++") 
+#endif()
 
 SET(CMAKE_CXX_FLAGS "-Wall")
 SET( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/public/lib )
-PROJECT( CoolDown )
 ADD_DEFINITIONS( -DWall )
 
 #recompile the proto files

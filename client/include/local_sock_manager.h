@@ -23,7 +23,7 @@ using Poco::Net::SocketAddress;
 
 namespace Poco{
             template <>
-            class Poco::ReleasePolicy<StreamSocket>
+            class ReleasePolicy<StreamSocket>
             {
                 public:
                      static void release(StreamSocket* pObj)

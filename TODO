@@ -2,3 +2,4 @@ Define the Torrent File Message Type( use protobuf ).
 Add UploadTask.
 Add mutex of JobInfo read-write members.
 Add threadpool to run Job.
+Find a way to use different compiler under different system
