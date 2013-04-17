@@ -56,9 +56,9 @@ namespace CoolDown{
                 string get_chunk_checksum(int chunk_pos) const;
                 uint64_t get_chunk_offset(int chunk_pos) const;
             private:
-                string fileid_;
-                int chunk_count_;
                 Torrent::File file_;
+                int chunk_count_;
+                string fileid_;
         };
 
         typedef SharedPtr<TorrentFileInfo> TorrentFileInfoPtr;
@@ -73,8 +73,8 @@ namespace CoolDown{
                 const TorrentFileInfoPtr& get_file(const string& fileid);
 
             private:
-                int file_count_;
                 Torrent::Torrent torrent_;
+                int file_count_;
                 file_map_t fileMap_;
         };
 
@@ -127,8 +127,12 @@ namespace CoolDown{
 
         class CoolClient;
         class JobInfo{
+            private:
+                CoolClient& app_;
+                Logger& logger_;
+
             public:
-                JobInfo();
+                JobInfo(const Torrent::Torrent& torrent);
                 ~JobInfo();
 
                 string clientid() const;
@@ -139,9 +143,6 @@ namespace CoolDown{
                 DownloadInfo downloadInfo;
                 TorrentInfo torrentInfo;
 
-            private:
-                CoolClient& app_;
-                Logger& logger_;
         };
     }
 }

@@ -2,11 +2,11 @@
 #define UPLOAD_TASK_H
 
 #include <Poco/Task.h>
-#include <Poco/StreamSocket.h>
+#include <Poco/Net/StreamSocket.h>
 #include <Poco/SharedPtr.h>
 
 using Poco::Task;
-using Poco::StreamSocket;
+using Poco::Net::StreamSocket;
 using Poco::SharedPtr;
 
 namespace CoolDown{

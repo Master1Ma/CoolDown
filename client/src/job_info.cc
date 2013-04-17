@@ -10,7 +10,9 @@ namespace CoolDown{
 
         //TorrentFileInfo 
         TorrentFileInfo::TorrentFileInfo(const Torrent::File& file)
-        :file_(file), chunk_count_(file_.chunk().size()), fileid_(file_.checksum()){
+        :file_(file), 
+        chunk_count_(file_.chunk().size()), 
+        fileid_(file_.checksum()){
         }
 
         TorrentFileInfo::~TorrentFileInfo(){
@@ -58,21 +60,22 @@ namespace CoolDown{
 
         //TorrentInfo
         TorrentInfo::TorrentInfo(const Torrent::Torrent& torrent)
-        :torrent_(torrent), file_count_(torrent_.file().size()){
-            for(int pos = 0; pos != torrent_.file().size(); ++i){
-                const Torrent::File& file = torrent_.Get(pos);
-                fileMap_[file.checksum()] = TorrentFileInfoPtr(file);
+        :torrent_(torrent), 
+        file_count_(torrent_.file().size()){
+            for(int pos = 0; pos != torrent_.file().size(); ++pos){
+                const Torrent::File& file = torrent_.file().Get(pos);
+                fileMap_[file.checksum()] = TorrentFileInfoPtr(new TorrentFileInfo(file) );
             }
         }
 
         TorrentInfo::~TorrentInfo(){
         }
 
-        const file_map_t& TorrentFileInfo::get_file_map() const{
+        const TorrentInfo::file_map_t& TorrentInfo::get_file_map() const{
             return this->fileMap_;
         }
         
-        int TorrentFileInfo::get_file_count() const{
+        int TorrentInfo::get_file_count() const{
             return this->file_count_;
         }
         
@@ -83,9 +86,10 @@ namespace CoolDown{
         }
 
         //JobInfo
-        JobInfo::JobInfo()
+        JobInfo::JobInfo(const Torrent::Torrent& torrent)
         :app_(dynamic_cast<CoolClient&>(Application::instance()) ),
-         logger_(app_.logger())
+         logger_(app_.logger()),
+         torrentInfo(torrent)
         {
         }
 

@@ -116,7 +116,7 @@ namespace CoolDown{
                             continue;
                         }else{
                             int chunk_pos = chunk_info->chunk_num;
-                            tm_.start( new DownloadTask(jobInfo_.torrentInfo, jobInfo_.downloadInfo, 
+                            tm_.start( new DownloadTask(*(jobInfo_.torrentInfo.get_file(chunk_info->fileid)), jobInfo_.downloadInfo, 
                                         jobInfo_.clientid(), sock, chunk_pos, file) );
                         }
                     }

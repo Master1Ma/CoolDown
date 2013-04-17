@@ -1,13 +1,19 @@
 #include "upload_task.h"
 #include <Poco/SharedMemory.h>
+#include <Poco/Format.h>
 
 using Poco::SharedMemory;
+using Poco::format;
 
 namespace CoolDown{
     namespace Client{
 
         UploadTask::UploadTask(JobInfo& jobInfo, const SockPtr& sock, int chunk_pos)
-        :jobInfo_(jobInfo), sock_(sock), chunk_pos_(chunk_pos){
+        :Task(format("%s:%d", sock->peerAddress().host().toString(), chunk_pos)), 
+        jobInfo_(jobInfo),
+        sock_(sock), 
+        chunk_pos_(chunk_pos)
+        {
             
         }
         UploadTask::~UploadTask(){

@@ -19,7 +19,7 @@ using namespace ClientProto;
 namespace CoolDown{
     namespace Client{
 
-        DownloadTask::DownloadTask(TorrentFileInfo& info, DownloadInfo& downloadInfo, 
+        DownloadTask::DownloadTask(const TorrentFileInfo& info, DownloadInfo& downloadInfo, 
                 const string& clientid, const SockPtr& sock, int chunk_pos, const File& file)
         :Task(format("%s:%d", sock->peerAddress().host().toString(), chunk_pos)), 
          fileInfo_(info), 

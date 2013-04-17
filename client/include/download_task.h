@@ -21,7 +21,7 @@ namespace CoolDown{
         struct DownloadInfo;
         class DownloadTask : public Task{
             public:
-                DownloadTask(TorrentFileInfo& info, DownloadInfo& downloadInfo, 
+                DownloadTask(const TorrentFileInfo& info, DownloadInfo& downloadInfo, 
                         const string& clientid, const SockPtr& sock, int chunk_pos, const File& file);
 
                 void runTask();
@@ -46,7 +46,7 @@ namespace CoolDown{
                 }
 
             private:
-                TorrentFileInfo& fileInfo_;
+                const TorrentFileInfo& fileInfo_;
                 DownloadInfo& downloadInfo_;
                 string clientid_;
                 SockPtr sock_;
