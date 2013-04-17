@@ -3,6 +3,7 @@
 
 #include "job_info.h"
 #include <vector>
+#include <string>
 #include <queue>
 #include <Poco/Mutex.h>
 using std::vector;
@@ -26,6 +27,7 @@ namespace CoolDown{
             :status(FREE), priority(0), chunk_num(0){
             }
             ChunkStatus status;
+            string fileid;
             int priority;
             int chunk_num;
             vector<FileOwnerInfoPtr> clientLists;

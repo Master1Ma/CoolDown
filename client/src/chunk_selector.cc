@@ -13,11 +13,18 @@ namespace CoolDown{
         }
 
         void ChunkSelector::init_queue(){
-            for(int chunk_pos = 0; chunk_pos != jobInfo_.torrentInfo.chunk_count; ++chunk_pos){
-                ChunkInfoPtr info(new ChunkInfo);
-                info->chunk_num = chunk_pos;
-                get_priority(info, 0);
-                chunk_queue_.push(info);
+            const TorrentInfo::file_map_t& fileMap = jobInfo_.torrentInfo.get_file_map();
+            TorrentInfo::file_map_t::const_iterator iter = fileMap.begin();
+
+            while( iter != fileMap.end() ){
+                for(int chunk_pos = 0; chunk_pos != iter->second->get_chunk_count(); ++chunk_pos){
+                    ChunkInfoPtr info(new ChunkInfo);
+                    info->chunk_num = chunk_pos;
+                    info->fileid = iter->first;
+                    get_priority(info, 0);
+                    chunk_queue_.push(info);
+                }
+                ++iter;
             }
         }
 

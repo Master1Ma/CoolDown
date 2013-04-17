@@ -74,12 +74,11 @@ namespace CoolDown{
                 if( jobInfo_.downloadInfo.is_finished ){
                     break;
                 }
-                Path path(jobInfo_.localFileInfo.path, jobInfo_.localFileInfo.filename);
-                File file(path);
+                File file(jobInfo_.localFileInfo.local_file);
                 //see if the download has been paused
                 if( jobInfo_.downloadInfo.is_download_paused ){
                     poco_debug(logger_, "download paused, goint to wait the download_pause_cond.");
-                    jobInfo_.download_pause_cond.wait(jobInfo_.download_pause_mutex);
+                    jobInfo_.downloadInfo.download_pause_cond.wait(jobInfo_.downloadInfo.download_pause_mutex);
                 }else{
                     ChunkInfoPtr chunk_info = cs_.get_chunk();
                     if( chunk_info.isNull() ){
@@ -117,8 +116,8 @@ namespace CoolDown{
                             continue;
                         }else{
                             int chunk_pos = chunk_info->chunk_num;
-                            tm_.start( new DownloadTask(jobInfo_, clientid, sock, chunk_pos, 
-                                        jobInfo_.torrentInfo.chunk_checksum_list[chunk_pos], file) );
+                            tm_.start( new DownloadTask(jobInfo_.torrentInfo, jobInfo_.downloadInfo, 
+                                        jobInfo_.clientid(), sock, chunk_pos, file) );
                         }
                     }
                 }

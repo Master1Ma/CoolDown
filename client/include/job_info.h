@@ -11,6 +11,8 @@
 #include <Poco/Logger.h>
 #include <Poco/Condition.h>
 #include <Poco/Mutex.h>
+#include <Poco/File.h>
+#include "torrent.pb.h"
 
 using std::map;
 using std::string;
@@ -24,6 +26,7 @@ using Poco::SharedPtr;
 using Poco::Logger;
 using Poco::Condition;
 using Poco::FastMutex;
+using Poco::File;
 
 namespace CoolDown{
     namespace Client{
@@ -37,20 +40,42 @@ namespace CoolDown{
         struct LocalFileInfo{
             string path;
             string filename;
+            File local_file;
         };
 
-        struct TorrentInfo{
-            string fileid;
-            string file_checksum;
+        class TorrentFileInfo{
+            public:
+                TorrentFileInfo(const Torrent::File& file);
+                ~TorrentFileInfo();
+                uint64_t get_size() const;
+                string get_checksum() const;
+                string get_fileid() const;
 
-            uint64_t file_size;
-            string file_name;
-            string create_time;
-            int type;
+                int get_chunk_count() const;
+                int get_chunk_size(int chunk_pos) const;
+                string get_chunk_checksum(int chunk_pos) const;
+                uint64_t get_chunk_offset(int chunk_pos) const;
+            private:
+                string fileid_;
+                int chunk_count_;
+                Torrent::File file_;
+        };
 
-            int size_per_chunk;
-            int chunk_count;
-            StringList chunk_checksum_list;
+        typedef SharedPtr<TorrentFileInfo> TorrentFileInfoPtr;
+
+        class TorrentInfo{
+            public:
+                typedef map<string, TorrentFileInfoPtr> file_map_t;
+                TorrentInfo(const Torrent::Torrent& torrent);
+                ~TorrentInfo();
+                int get_file_count() const;
+                const file_map_t& get_file_map() const;
+                const TorrentFileInfoPtr& get_file(const string& fileid);
+
+            private:
+                int file_count_;
+                Torrent::Torrent torrent_;
+                file_map_t fileMap_;
         };
 
         struct FileOwnerInfo{
@@ -88,6 +113,12 @@ namespace CoolDown{
             atomic_uint64_t upload_total;
             atomic_uint64_t download_total;
 
+            Condition download_speed_limit_cond;
+            FastMutex download_speed_limit_mutex;
+
+            Condition download_pause_cond;
+            FastMutex download_pause_mutex;
+
             int percentage;
             int max_parallel_task;
             file_bitmap_ptr bitmap;
@@ -107,11 +138,6 @@ namespace CoolDown{
                 owner_info_map_t ownerInfoMap;
                 DownloadInfo downloadInfo;
                 TorrentInfo torrentInfo;
-                Condition download_speed_limit_cond;
-                FastMutex download_speed_limit_mutex;
-
-                Condition download_pause_cond;
-                FastMutex download_pause_mutex;
 
             private:
                 CoolClient& app_;

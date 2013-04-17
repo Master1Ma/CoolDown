@@ -17,10 +17,13 @@ namespace CoolDown{
     namespace Client{
         typedef SharedPtr<StreamSocket> SockPtr;
 
-        class JobInfo;
+        class TorrentFileInfo;
+        struct DownloadInfo;
         class DownloadTask : public Task{
             public:
-                DownloadTask(JobInfo& info, const string& clientid, const SockPtr& sock, int chunk_pos, const string& check_sum, const File& file);
+                DownloadTask(TorrentFileInfo& info, DownloadInfo& downloadInfo, 
+                        const string& clientid, const SockPtr& sock, int chunk_pos, const File& file);
+
                 void runTask();
                 int chunk_pos() const{
                     return this->chunk_pos_;
@@ -43,7 +46,8 @@ namespace CoolDown{
                 }
 
             private:
-                JobInfo& jobInfo_;
+                TorrentFileInfo& fileInfo_;
+                DownloadInfo& downloadInfo_;
                 string clientid_;
                 SockPtr sock_;
                 int chunk_pos_;

@@ -8,6 +8,7 @@
 #include <Poco/Exception.h>
 #include <Poco/Buffer.h>
 #include <Poco/SharedMemory.h>
+#include <Poco/Bugcheck.h>
 
 using Poco::format;
 using Poco::Exception;
@@ -18,18 +19,24 @@ using namespace ClientProto;
 namespace CoolDown{
     namespace Client{
 
-        DownloadTask::DownloadTask(JobInfo& info, const string& clientid, const SockPtr& sock, 
-                int chunk_pos, const string& check_sum, const File& file)
+        DownloadTask::DownloadTask(TorrentFileInfo& info, DownloadInfo& downloadInfo, 
+                const string& clientid, const SockPtr& sock, int chunk_pos, const File& file)
         :Task(format("%s:%d", sock->peerAddress().host().toString(), chunk_pos)), 
-         jobInfo_(info), clientid_(clientid), sock_(sock), 
-         chunk_pos_(chunk_pos), check_sum_(check_sum), file_(file), reported_(false){
+         fileInfo_(info), 
+         downloadInfo_(downloadInfo),
+         clientid_(clientid), 
+         sock_(sock), 
+         chunk_pos_(chunk_pos), 
+         check_sum_(fileInfo_.get_chunk_checksum(chunk_pos_)), 
+         file_(file), 
+         reported_(false){
 
         }
 
         void DownloadTask::runTask(){
             UploadRequest req;
-            req.set_clientid(jobInfo_.clientid());
-            req.set_fileid(jobInfo_.torrentInfo.fileid);
+            req.set_clientid(clientid_);
+            req.set_fileid(fileInfo_.get_fileid());
             req.set_chunknumber(chunk_pos_);
 
             NetPack pack( PAYLOAD_UPLOAD_REQUEST, req );
@@ -51,33 +58,26 @@ namespace CoolDown{
             }
 
             //chunk_pos ranges from 0~chunk_count-1
-            bool isLastChunk = chunk_pos_ == ( jobInfo_.torrentInfo.chunk_count - 1 );
-            int chunk_size = 0;
-            if( isLastChunk ){
-                chunk_size = jobInfo_.torrentInfo.file_size - ( jobInfo_.torrentInfo.size_per_chunk * jobInfo_.torrentInfo.chunk_count - 1);
-            }else{
-                chunk_size = jobInfo_.torrentInfo.size_per_chunk;
-            }
-
-            //the size of last chunk must less-equal than the size of normal chunk
-            poco_assert( chunk_size <= jobInfo_.torrentInfo.size_per_chunk );
+            //bool isLastChunk = chunk_pos_ == ( fileInfo_.get_chunk_count() - 1 );
+            int chunk_size = fileInfo_.get_chunk_size(chunk_pos_);
+            poco_assert( chunk_size != -1 );
 
             string content;
             int nRecv = 0;
             while( nRecv <= chunk_size){
-                if( jobInfo_.downloadInfo.is_finished ){
+                if( downloadInfo_.is_finished ){
                     throw Exception("Job Finished.");
                 }
 
-                if( jobInfo_.downloadInfo.is_download_paused ){
-                    jobInfo_.download_pause_cond.wait(jobInfo_.download_pause_mutex);
+                if( downloadInfo_.is_download_paused ){
+                    downloadInfo_.download_pause_cond.wait(downloadInfo_.download_pause_mutex);
                 }
-                if( jobInfo_.downloadInfo.bytes_download_this_second > jobInfo_.downloadInfo.upload_speed_limit ){
-                    jobInfo_.download_speed_limit_cond.wait(jobInfo_.download_speed_limit_mutex);
+                if( downloadInfo_.bytes_download_this_second > downloadInfo_.upload_speed_limit ){
+                    downloadInfo_.download_speed_limit_cond.wait(downloadInfo_.download_speed_limit_mutex);
                 }else{
                     Buffer<char> recvBuffer(chunk_size);
                     int n = sock_->receiveBytes(recvBuffer.begin(), recvBuffer.size() );
-                    jobInfo_.downloadInfo.bytes_download_this_second += n;
+                    downloadInfo_.bytes_download_this_second += n;
                     nRecv += n;
                     content.append( recvBuffer.begin(), n );
                 }
@@ -92,8 +92,8 @@ namespace CoolDown{
             }
 
             SharedMemory sm(file_, SharedMemory::AM_WRITE);
-            //32bits vs 64bits problem???
-            memcpy(sm.begin() + chunk_pos_ * jobInfo_.torrentInfo.size_per_chunk, content.data(), content.length() );
+            //64bits problem???
+            memcpy(sm.begin() + fileInfo_.get_chunk_offset(chunk_pos_), content.data(), content.length() );
         }
     }
 }
