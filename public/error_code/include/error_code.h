@@ -40,6 +40,9 @@ enum retcode_t{
     ERROR_FILE_CANNOT_CREATE = 60003,
     ERROR_FILE_PARSE_ERROR = 60004,
 
+    ERROR_JOB_EXISTS = 60001,
+    ERROR_JOB_NOT_EXISTS = 60002,
+
 };
 
 const char* errmsg(retcode_t ret);

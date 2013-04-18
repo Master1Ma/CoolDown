@@ -27,7 +27,7 @@ namespace CoolDown{
          clientid_(clientid), 
          sock_(sock), 
          chunk_pos_(chunk_pos), 
-         check_sum_(fileInfo_.get_chunk_checksum(chunk_pos_)), 
+         check_sum_(fileInfo_.chunk_checksum(chunk_pos_)), 
          file_(file), 
          reported_(false){
 
@@ -36,7 +36,7 @@ namespace CoolDown{
         void DownloadTask::runTask(){
             UploadRequest req;
             req.set_clientid(clientid_);
-            req.set_fileid(fileInfo_.get_fileid());
+            req.set_fileid(fileInfo_.fileid());
             req.set_chunknumber(chunk_pos_);
 
             NetPack pack( PAYLOAD_UPLOAD_REQUEST, req );
@@ -59,7 +59,7 @@ namespace CoolDown{
 
             //chunk_pos ranges from 0~chunk_count-1
             //bool isLastChunk = chunk_pos_ == ( fileInfo_.get_chunk_count() - 1 );
-            int chunk_size = fileInfo_.get_chunk_size(chunk_pos_);
+            int chunk_size = fileInfo_.chunk_size(chunk_pos_);
             poco_assert( chunk_size != -1 );
 
             string content;
@@ -93,7 +93,7 @@ namespace CoolDown{
 
             SharedMemory sm(file_, SharedMemory::AM_WRITE);
             //64bits problem???
-            memcpy(sm.begin() + fileInfo_.get_chunk_offset(chunk_pos_), content.data(), content.length() );
+            memcpy(sm.begin() + fileInfo_.chunk_offset(chunk_pos_), content.data(), content.length() );
         }
     }
 }

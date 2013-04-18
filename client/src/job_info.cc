@@ -8,6 +8,35 @@ using Poco::Util::Application;
 namespace CoolDown{
     namespace Client{
 
+        //LocalFileInfo
+        LocalFileInfo::LocalFileInfo(const string& top_path)
+        :top_path(top_path){
+        }
+
+        retcode_t LocalFileInfo::add_file(const string& fileid, const string& relative_path){
+            FastMutex::ScopedLock lock(mutex_);
+            map<string, FilePtr>::iterator iter = files.find(fileid);
+            poco_assert( iter == files.end() );
+            files[fileid] = FilePtr( new File(top_path.append(relative_path)) );
+            return ERROR_OK;
+        }
+
+        FilePtr LocalFileInfo::get_file(const string& fileid){
+            FastMutex::ScopedLock lock(mutex_);
+            FilePtr res;
+            map<string, FilePtr>::iterator iter = files.find(fileid);
+            if( iter != files.end() ){
+                res = iter->second;
+            }
+            return res;
+        }
+        bool LocalFileInfo::has_file(const string& fileid){
+            FastMutex::ScopedLock lock(mutex_);
+            return files.end() == files.find(fileid);
+        }
+
+        
+
         //TorrentFileInfo 
         TorrentFileInfo::TorrentFileInfo(const Torrent::File& file)
         :file_(file), 
@@ -18,30 +47,34 @@ namespace CoolDown{
         TorrentFileInfo::~TorrentFileInfo(){
         }
 
-        int TorrentFileInfo::get_chunk_count() const{
+        int TorrentFileInfo::chunk_count() const{
             return this->chunk_count_;
         }
 
-        uint64_t TorrentFileInfo::get_size() const{
+        uint64_t TorrentFileInfo::size() const{
             return file_.size();
         }
 
-        string TorrentFileInfo::get_checksum() const{
+        string TorrentFileInfo::checksum() const{
             return file_.checksum();
         }
 
-        string TorrentFileInfo::get_fileid() const{
+        string TorrentFileInfo::fileid() const{
             return this->fileid_;
         }
 
-        string TorrentFileInfo::get_chunk_checksum(int chunk_pos) const{
+        string TorrentFileInfo::relative_path() const{
+            return file_.relativepath();
+        }
+
+        string TorrentFileInfo::chunk_checksum(int chunk_pos) const{
             if( chunk_pos >= chunk_count_ ){
                 return "";
             }
             return file_.chunk().Get(chunk_pos).checksum();
 
         }
-        uint64_t TorrentFileInfo::get_chunk_offset(int chunk_pos) const{
+        uint64_t TorrentFileInfo::chunk_offset(int chunk_pos) const{
             if( chunk_pos >= chunk_count_ ){
                 return 0;
             }
@@ -50,7 +83,7 @@ namespace CoolDown{
         }
 
 
-        int TorrentFileInfo::get_chunk_size(int chunk_pos) const{
+        int TorrentFileInfo::chunk_size(int chunk_pos) const{
             if( chunk_pos >= chunk_count_ ){
                 return -1;
             }
@@ -85,10 +118,19 @@ namespace CoolDown{
             return iter->second;
         }
 
+        //DownloadInfo
+        DownloadInfo::DownloadInfo()
+        :is_finished(false),
+        is_download_paused(true),
+        is_upload_paused(true)
+        {
+        }
+
         //JobInfo
-        JobInfo::JobInfo(const Torrent::Torrent& torrent)
+        JobInfo::JobInfo(const Torrent::Torrent& torrent, const string& top_path)
         :app_(dynamic_cast<CoolClient&>(Application::instance()) ),
          logger_(app_.logger()),
+         localFileInfo(top_path),
          torrentInfo(torrent)
         {
         }

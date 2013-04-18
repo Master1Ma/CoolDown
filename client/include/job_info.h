@@ -1,6 +1,8 @@
 #ifndef JOB_INFO_h
 #define JOB_INFO_h
 
+#include "torrent.pb.h"
+#include "error_code.h"
 #include <map>
 #include <string>
 #include <vector>
@@ -12,7 +14,6 @@
 #include <Poco/Condition.h>
 #include <Poco/Mutex.h>
 #include <Poco/File.h>
-#include "torrent.pb.h"
 
 using std::map;
 using std::string;
@@ -34,27 +35,35 @@ namespace CoolDown{
         typedef dynamic_bitset<uint64_t> file_bitmap_t;
         typedef SharedPtr<file_bitmap_t> file_bitmap_ptr;
         typedef vector<string> StringList;
+        typedef SharedPtr<File> FilePtr;
         const static string INVALID_FILEID = "INVALID FILEID";
         const static string INVALID_CLIENTID = "INVALID CLIENTID";
 
-        struct LocalFileInfo{
-            string path;
-            string filename;
-            File local_file;
+        class LocalFileInfo{
+            public:
+                LocalFileInfo(const string& top_path);
+                retcode_t add_file(const string& fileid, const string& relative_path);
+                FilePtr get_file(const string& fileid);
+                bool has_file(const string& fileid);
+            private:
+                string top_path;
+                map<string, FilePtr> files;
+                FastMutex mutex_;
         };
 
         class TorrentFileInfo{
             public:
                 TorrentFileInfo(const Torrent::File& file);
                 ~TorrentFileInfo();
-                uint64_t get_size() const;
-                string get_checksum() const;
-                string get_fileid() const;
+                uint64_t size() const;
+                string checksum() const;
+                string fileid() const;
+                string relative_path() const;
 
-                int get_chunk_count() const;
-                int get_chunk_size(int chunk_pos) const;
-                string get_chunk_checksum(int chunk_pos) const;
-                uint64_t get_chunk_offset(int chunk_pos) const;
+                int chunk_count() const;
+                int chunk_size(int chunk_pos) const;
+                string chunk_checksum(int chunk_pos) const;
+                uint64_t chunk_offset(int chunk_pos) const;
             private:
                 Torrent::File file_;
                 int chunk_count_;
@@ -101,6 +110,7 @@ namespace CoolDown{
         typedef SharedPtr<FileOwnerInfo> FileOwnerInfoPtr;
 
         struct DownloadInfo{
+            DownloadInfo();
             atomic_bool is_finished;
             atomic_bool is_download_paused;
             atomic_bool is_upload_paused;
@@ -132,7 +142,7 @@ namespace CoolDown{
                 Logger& logger_;
 
             public:
-                JobInfo(const Torrent::Torrent& torrent);
+                JobInfo(const Torrent::Torrent& torrent, const string& top_path);
                 ~JobInfo();
 
                 string clientid() const;

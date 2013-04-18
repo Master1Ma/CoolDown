@@ -10,6 +10,7 @@
 #include <Poco/Path.h>
 #include <Poco/File.h>
 #include <Poco/Types.h>
+#include <Poco/ThreadPool.h>
 #include <google/protobuf/message.h>
 using google::protobuf::Message;
 
@@ -20,6 +21,7 @@ using Poco::Path;
 using Poco::File;
 using Poco::Int32;
 using Poco::Int64;
+using Poco::ThreadPool;
 
 namespace Torrent{
     class Torrent;
@@ -28,14 +30,17 @@ namespace Torrent{
 namespace CoolDown{
     namespace Client{
 
+            class Job;
             class CoolClient : public Application{
                 public:
+
                     CoolClient(int argc, char* argv[]);
                     const static unsigned int TRACKER_PORT = 9977;
                     typedef vector<string> ClientIdCollection;
                     typedef vector<File> FileList;
                     typedef LocalSockManager::LocalSockManagerPtr LocalSockManagerPtr;
                     typedef int make_torrent_progress_callback_t;
+                    typedef SharedPtr<Job> JobPtr;
                     void initialize(Application& self);
                     void uninitialize();
                     int main(const vector<string>& args);
@@ -49,12 +54,24 @@ namespace CoolDown{
                     retcode_t report_progress(const string& tracker_address, const string& fileid, int percentage);
                     retcode_t request_clients(const string& tracker_address, const string& fileid, int currentPercentage, 
                                           int needCount, const ClientIdCollection& clientids);
-                    //retcode_t make_torrent(const Path& path, TorrentInfo&);
+
+                    //job control
+                    retcode_t add_job(const Torrent::Torrent& torrent, const string& top_path, int* internal_handle);
+                    retcode_t start_job(int handle);
+                    retcode_t pause_download(int handle);
+                    retcode_t resume_download(int handle);
+                    
+
+
+
+                    //torrent operator
                     retcode_t parse_torrent(const Path& torrent_file_path, Torrent::Torrent* pTorrent);
                     retcode_t make_torrent(const Path& path, const Path& torrent_file_path, 
                             Int32 chunk_size, Int32 type, const string& tracker_address);
 
+                    //self identity
                     string clientid() const;
+
                     string current_time() const;
 
                     void set_make_torrent_progress_callback(make_torrent_progress_callback_t callback);
@@ -72,6 +89,11 @@ namespace CoolDown{
                     LocalSockManagerPtr sockManager_;
                     NetTaskManager downloadManager_;
                     NetTaskManager uploadManager_;
+
+                    int job_index_;
+                    typedef map<int, JobPtr> JobMap;
+                    JobMap jobs_;
+                    ThreadPool jobThreads_;
 
                     make_torrent_progress_callback_t make_torrent_progress_callback_;
 

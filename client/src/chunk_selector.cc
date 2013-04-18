@@ -17,7 +17,7 @@ namespace CoolDown{
             TorrentInfo::file_map_t::const_iterator iter = fileMap.begin();
 
             while( iter != fileMap.end() ){
-                for(int chunk_pos = 0; chunk_pos != iter->second->get_chunk_count(); ++chunk_pos){
+                for(int chunk_pos = 0; chunk_pos != iter->second->chunk_count(); ++chunk_pos){
                     ChunkInfoPtr info(new ChunkInfo);
                     info->chunk_num = chunk_pos;
                     info->fileid = iter->first;

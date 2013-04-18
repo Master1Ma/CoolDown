@@ -18,8 +18,12 @@ using Poco::File;
 namespace CoolDown{
     namespace Client{
 
-        Job::Job(JobInfo& info, LocalSockManager& m, Logger& logger)
-        :jobInfo_(info), sockManager_(m), cs_(jobInfo_, sockManager_), logger_(logger){
+        Job::Job(const JobInfoPtr& info, LocalSockManager& m, Logger& logger)
+        :jobInfoPtr_(info),
+        jobInfo_(*jobInfoPtr_), 
+        sockManager_(m), 
+        cs_(jobInfo_, sockManager_), 
+        logger_(logger){
             tm_.addObserver(
                     Observer<Job, TaskFinishedNotification>
                     (*this, &Job::onFinished)
@@ -39,6 +43,13 @@ namespace CoolDown{
                     Observer<Job, TaskFailedNotification>
                     (*this, &Job::onFailed)
                     );
+        }
+
+        JobInfoPtr Job::MutableJobInfo(){
+            return this->jobInfoPtr_;
+        }
+        const JobInfo& Job::JobInfo() const{
+            return this->jobInfo_;
         }
         
         void Job::onFinished(TaskFinishedNotification* pNf){
@@ -70,14 +81,15 @@ namespace CoolDown{
 
         void Job::run(){
             while(1){
+                poco_notice(logger_, "enter Job::run()");
                 //see if the Job(upload&download) has been shutdown
                 if( jobInfo_.downloadInfo.is_finished ){
                     break;
                 }
-                File file(jobInfo_.localFileInfo.local_file);
+                //File file(jobInfo_.localFileInfo.local_file)
                 //see if the download has been paused
                 if( jobInfo_.downloadInfo.is_download_paused ){
-                    poco_debug(logger_, "download paused, goint to wait the download_pause_cond.");
+                    poco_notice(logger_, "download paused, going to wait the download_pause_cond.");
                     jobInfo_.downloadInfo.download_pause_cond.wait(jobInfo_.downloadInfo.download_pause_mutex);
                 }else{
                     ChunkInfoPtr chunk_info = cs_.get_chunk();
@@ -116,8 +128,22 @@ namespace CoolDown{
                             continue;
                         }else{
                             int chunk_pos = chunk_info->chunk_num;
-                            tm_.start( new DownloadTask(*(jobInfo_.torrentInfo.get_file(chunk_info->fileid)), jobInfo_.downloadInfo, 
-                                        jobInfo_.clientid(), sock, chunk_pos, file) );
+                            string fileid( chunk_info->fileid );
+                            TorrentFileInfoPtr fileInfo = jobInfo_.torrentInfo.get_file(fileid);
+
+                            if( false == jobInfo_.localFileInfo.has_file(fileid) ){
+                                jobInfo_.localFileInfo.add_file( fileid, fileInfo->relative_path() );
+                            }
+                            FilePtr file = jobInfo_.localFileInfo.get_file(fileid);
+                            tm_.start( new DownloadTask(
+                                        *fileInfo, 
+                                        jobInfo_.downloadInfo, 
+                                        jobInfo_.clientid(), 
+                                        sock, 
+                                        chunk_pos, 
+                                        *file
+                                        ) 
+                                    );
                         }
                     }
                 }

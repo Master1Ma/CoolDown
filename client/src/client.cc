@@ -1,9 +1,12 @@
 #include "client.h"
+#include "job.h"
+#include "job_info.h"
 #include "payload_type.h"
 #include "netpack.h"
 #include "tracker.pb.h"
 #include "torrent.pb.h"
 #include "verification.h"
+
 #include <fstream>
 #include <Poco/Logger.h>
 #include <Poco/Exception.h>
@@ -12,6 +15,7 @@
 #include <Poco/DateTimeFormat.h>
 #include <Poco/DateTimeFormatter.h>
 #include <Poco/LocalDateTime.h>
+
 
 using std::ifstream;
 using std::ofstream;
@@ -24,7 +28,8 @@ using namespace TrackerProto;
 namespace CoolDown{
     namespace Client{
             CoolClient::CoolClient(int argc, char* argv[])
-            :Application(argc, argv){
+            :Application(argc, argv),
+            jobThreads_("JobThreadPool"){
             }
 
             void CoolClient::initialize(Application& self){
@@ -32,11 +37,26 @@ namespace CoolDown{
                 Application::initialize(self);
 
                 setLogger(Logger::get("ConsoleLogger"));
-                poco_debug(logger(), "test ConsoleLogger in initialize.");
+                poco_notice_f1(logger(), "Logger Level : %d", logger().getLevel());
+#ifdef _DEBUG
+                poco_notice(logger(), "Debug mode");
+#endif
+                if( logger().trace() ){
+                    poco_trace(logger(), "Trace Message.");
+                    poco_debug(logger(), "Debug Message.");
+                    poco_information(logger(), "Information Message.");
+                    poco_notice(logger(), "Notice Message.");
+                    poco_warning(logger(), "Warning Message.");
+                    poco_error(logger(), "Error Message.");
+                    poco_critical(logger(), "Critical Message.");
+                    poco_fatal(logger(), "Fatal Message.");
+                }
+
                 this->init_error_ = false;
                 this->clientid_ = Verification::get_verification_code( Poco::Environment::nodeId() );
                 string msg;
                 try{
+                    job_index_ = 0;
                     sockManager_.assign( new LocalSockManager );
                     if( sockManager_.isNull() ){
                         msg = "Cannot create LocalSockManager.";
@@ -61,9 +81,32 @@ namespace CoolDown{
                 if( args.size() != 2 ){
                     return Application::EXIT_USAGE;
                 }
+                int handle = -1;
                 retcode_t ret = this->make_torrent(args[0], args[1],
                         1 << 20, 0, "localhost:9977");
                 poco_notice_f1(logger(), "make_torrent retcode : %d", (int)ret);
+
+                Torrent::Torrent torrent;
+                ret = this->parse_torrent( args[1], &torrent );
+                poco_notice_f1(logger(), "parse_torrent retcode : %d", (int)ret);
+                if( ret != ERROR_OK ){
+                    goto err;
+                }
+
+                ret = this->add_job(torrent, "/tmp/", &handle);
+                poco_notice_f1(logger(), "add_job retcode : %d", (int)ret);
+                if( ret != ERROR_OK ){
+                    goto err;
+                }
+
+                ret = this->start_job(handle);
+                poco_notice_f1(logger(), "start_job retcode : %d", (int)ret);
+                if( ret != ERROR_OK ){
+                    goto err;
+                }
+
+                jobThreads_.joinAll();
+
 #endif
 #if 0
                 string tracker_address("localhost");
@@ -76,10 +119,14 @@ namespace CoolDown{
                 }
 #endif
                 return Application::EXIT_OK;
+err:
+                return Application::EXIT_TEMPFAIL;
             }
+
             NetTaskManager& CoolClient::download_manager(){
                 return this->downloadManager_;
             }
+
             NetTaskManager& CoolClient::upload_manager(){
                 return this->uploadManager_;
             }
@@ -268,6 +315,42 @@ namespace CoolDown{
                 poco_assert( torrent.SerializeToOstream(&ofs) );
                 ofs.close();
 
+                return ERROR_OK;
+            }
+
+            retcode_t CoolClient::add_job(const Torrent::Torrent& torrent, const string& top_path, int* internal_handle){
+                SharedPtr<JobInfo> info( new JobInfo( torrent, top_path ) );
+                int this_job_index = job_index_;
+                jobs_[job_index_] = JobPtr( new Job(info, *(this->sockManager_), logger()) );
+                ++job_index_;
+                *internal_handle = this_job_index;
+                return ERROR_OK;
+            }
+
+            retcode_t CoolClient::start_job(int handle){
+                JobMap::iterator iter = jobs_.find(handle);
+                if( iter == jobs_.end() ){
+                    return ERROR_JOB_NOT_EXISTS;
+                }
+                jobThreads_.start(*(iter->second));
+                return ERROR_OK;
+            }
+
+            retcode_t CoolClient::pause_download(int handle){
+                JobMap::iterator iter = jobs_.find(handle);
+                if( iter == jobs_.end() ){
+                    return ERROR_JOB_NOT_EXISTS;
+                }
+                iter->second->MutableJobInfo()->downloadInfo.is_download_paused = true;
+                return ERROR_OK;
+            }
+
+            retcode_t CoolClient::resume_download(int handle){
+                JobMap::iterator iter = jobs_.find(handle);
+                if( iter == jobs_.end() ){
+                    return ERROR_JOB_NOT_EXISTS;
+                }
+                iter->second->MutableJobInfo()->downloadInfo.is_download_paused = false;
                 return ERROR_OK;
             }
 
