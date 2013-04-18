@@ -33,6 +33,10 @@ namespace CoolDown{
 
         }
 
+        string DownloadTask::fileid() const{
+            return fileInfo_.fileid();
+        }
+
         void DownloadTask::runTask(){
             UploadRequest req;
             req.set_clientid(clientid_);

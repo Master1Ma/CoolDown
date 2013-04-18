@@ -108,6 +108,7 @@ namespace CoolDown{
         };
 
         typedef SharedPtr<FileOwnerInfo> FileOwnerInfoPtr;
+        typedef vector<FileOwnerInfoPtr> FileOwnerInfoPtrList;
 
         struct DownloadInfo{
             DownloadInfo();
@@ -147,7 +148,8 @@ namespace CoolDown{
 
                 string clientid() const;
 
-                typedef map<string, FileOwnerInfoPtr> owner_info_map_t;
+                //key : fileid, value : FileOwnerInfo
+                typedef map<string, FileOwnerInfoPtrList> owner_info_map_t;
                 LocalFileInfo localFileInfo;
                 owner_info_map_t ownerInfoMap;
                 DownloadInfo downloadInfo;

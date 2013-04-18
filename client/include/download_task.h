@@ -45,6 +45,8 @@ namespace CoolDown{
                     this->reported_ = true;
                 }
 
+                string fileid() const;
+
             private:
                 const TorrentFileInfo& fileInfo_;
                 DownloadInfo& downloadInfo_;

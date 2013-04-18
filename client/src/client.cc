@@ -37,20 +37,6 @@ namespace CoolDown{
                 Application::initialize(self);
 
                 setLogger(Logger::get("ConsoleLogger"));
-                poco_notice_f1(logger(), "Logger Level : %d", logger().getLevel());
-#ifdef _DEBUG
-                poco_notice(logger(), "Debug mode");
-#endif
-                if( logger().trace() ){
-                    poco_trace(logger(), "Trace Message.");
-                    poco_debug(logger(), "Debug Message.");
-                    poco_information(logger(), "Information Message.");
-                    poco_notice(logger(), "Notice Message.");
-                    poco_warning(logger(), "Warning Message.");
-                    poco_error(logger(), "Error Message.");
-                    poco_critical(logger(), "Critical Message.");
-                    poco_fatal(logger(), "Fatal Message.");
-                }
 
                 this->init_error_ = false;
                 this->clientid_ = Verification::get_verification_code( Poco::Environment::nodeId() );
@@ -84,23 +70,23 @@ namespace CoolDown{
                 int handle = -1;
                 retcode_t ret = this->make_torrent(args[0], args[1],
                         1 << 20, 0, "localhost:9977");
-                poco_notice_f1(logger(), "make_torrent retcode : %d", (int)ret);
+                poco_debug_f1(logger(), "make_torrent retcode : %d", (int)ret);
 
                 Torrent::Torrent torrent;
                 ret = this->parse_torrent( args[1], &torrent );
-                poco_notice_f1(logger(), "parse_torrent retcode : %d", (int)ret);
+                poco_debug_f1(logger(), "parse_torrent retcode : %d", (int)ret);
                 if( ret != ERROR_OK ){
                     goto err;
                 }
 
                 ret = this->add_job(torrent, "/tmp/", &handle);
-                poco_notice_f1(logger(), "add_job retcode : %d", (int)ret);
+                poco_debug_f1(logger(), "add_job retcode : %d", (int)ret);
                 if( ret != ERROR_OK ){
                     goto err;
                 }
 
                 ret = this->start_job(handle);
-                poco_notice_f1(logger(), "start_job retcode : %d", (int)ret);
+                poco_debug_f1(logger(), "start_job retcode : %d", (int)ret);
                 if( ret != ERROR_OK ){
                     goto err;
                 }
@@ -332,6 +318,7 @@ err:
                 if( iter == jobs_.end() ){
                     return ERROR_JOB_NOT_EXISTS;
                 }
+                this->resume_download(handle);
                 jobThreads_.start(*(iter->second));
                 return ERROR_OK;
             }

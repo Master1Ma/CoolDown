@@ -75,13 +75,15 @@ namespace CoolDown{
                 return;
             }
             poco_notice_f2(logger_,"task failed, name : %s, reason : %s", pTask->name(), pNf->reason().displayText());
-            cs_.report_failed_chunk( pTask->chunk_pos() );
+            cs_.report_failed_chunk( pTask->chunk_pos(), pTask->fileid() );
             pTask->set_reported();
         }
 
         void Job::run(){
+            cs_.init_queue();
             while(1){
-                poco_notice(logger_, "enter Job::run()");
+                const static int WAIT_TIMEOUT = 1000;
+                poco_debug(logger_, "enter Job::run()");
                 //see if the Job(upload&download) has been shutdown
                 if( jobInfo_.downloadInfo.is_finished ){
                     break;
@@ -89,8 +91,8 @@ namespace CoolDown{
                 //File file(jobInfo_.localFileInfo.local_file)
                 //see if the download has been paused
                 if( jobInfo_.downloadInfo.is_download_paused ){
-                    poco_notice(logger_, "download paused, going to wait the download_pause_cond.");
-                    jobInfo_.downloadInfo.download_pause_cond.wait(jobInfo_.downloadInfo.download_pause_mutex);
+                    poco_debug(logger_, "download paused, going to wait the download_pause_cond.");
+                    jobInfo_.downloadInfo.download_pause_cond.wait(jobInfo_.downloadInfo.download_pause_mutex, WAIT_TIMEOUT);
                 }else{
                     ChunkInfoPtr chunk_info = cs_.get_chunk();
                     if( chunk_info.isNull() ){
@@ -98,7 +100,14 @@ namespace CoolDown{
                         break;
                     }
                     vector<double> payloads;
-                    payloads.reserve(chunk_info->clientLists.size());
+                    int client_count = chunk_info->clientLists.size();
+                    if( client_count == 0 ){
+                        poco_notice(logger_, "Current no client has this chunk.");
+                        break;
+                    }
+
+                    poco_debug_f1(logger_, "Download chunk from %d clients", client_count);
+                    payloads.reserve( client_count );
 
                     for(int i = 0; i != chunk_info->clientLists.size(); ++i){
                         FileOwnerInfoPtr ownerInfo = chunk_info->clientLists[i];
@@ -107,13 +116,13 @@ namespace CoolDown{
 
                     vector<double>::iterator iter = min_element(payloads.begin(), payloads.end());
                     int index = iter - payloads.begin();
-                    poco_debug_f1(logger_, "Choose the %d file owner.", index);
+                    poco_debug_f1(logger_, "Choose the index %d file owner.", index);
 
                     //see if the minimal payload is 100%
                     if( abs(*iter - 1) < 1e-6 ){
                         poco_debug(logger_, "Even the lowest payload client is 100% payload.");
                         try{
-                            max_payload_cond_.wait(max_payload_mutex_, 1000);
+                            max_payload_cond_.wait(max_payload_mutex_, WAIT_TIMEOUT);
                             poco_notice(logger_, "wake up from max_payload_cond_");
                         }catch(Poco::TimeoutException& e){
                             poco_notice(logger_, "Wait max_payload_cond_ timeout!");

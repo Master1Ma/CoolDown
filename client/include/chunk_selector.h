@@ -46,12 +46,12 @@ namespace CoolDown{
                 ChunkSelector(JobInfo& info, LocalSockManager& sockManager);
                 ~ChunkSelector();
 
+                void init_queue();
                 ChunkInfoPtr get_chunk();
                 void report_success_chunk(int chunk_num);
-                void report_failed_chunk(int chunk_num);
+                void report_failed_chunk(int chunk_num, const string& fileid);
 
             private:
-                void init_queue();
                 void get_priority(ChunkInfoPtr info, int baseline);
 
                 const static int RARE_COUNT = 5;
@@ -64,7 +64,8 @@ namespace CoolDown{
                 JobInfo& jobInfo_;
                 LocalSockManager& sockManager_;
 
-                priority_queue<ChunkInfoPtr, vector<ChunkInfoPtr>, chunk_cmp> chunk_queue_;
+                typedef priority_queue<ChunkInfoPtr, vector<ChunkInfoPtr>, chunk_cmp> chunk_priority_queue_t;
+                chunk_priority_queue_t chunk_queue_;
                 FastMutex chunk_queue_mutex_;
         };
     }
