@@ -38,7 +38,6 @@ namespace CoolDown{
         }
 
         void ChunkSelector::get_priority(ChunkInfoPtr info, int baseline){
-
             JobInfo::owner_info_map_t& infoMap = jobInfo_.ownerInfoMap;
             poco_assert( infoMap.find(info->fileid) != infoMap.end() );
             const FileOwnerInfoPtrList& infoList = infoMap[ info->fileid ];
@@ -47,7 +46,6 @@ namespace CoolDown{
             info->priority = 0;
 
             FileOwnerInfoPtrList::const_iterator iter = infoList.begin();
-            //JobInfo::owner_info_map_t::iterator iter = infoMap.begin();
             while( iter != infoList.end() ){
                 FileOwnerInfoPtr p = *iter;
                 if( p->bitmap_ptr->test(info->chunk_num) ){
