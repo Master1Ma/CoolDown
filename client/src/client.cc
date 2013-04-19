@@ -1,6 +1,5 @@
 #include "client.h"
 #include "job.h"
-#include "job_info.h"
 #include "payload_type.h"
 #include "netpack.h"
 #include "tracker.pb.h"
@@ -94,28 +93,26 @@ namespace CoolDown{
                 jobThreads_.joinAll();
 
 #endif
-#if 0
-                string tracker_address("localhost");
-                string fileid("1234567890");
-                if( ERROR_OK == this->login_tracker(tracker_address) ){
-                    this->publish_resource_to_tracker(tracker_address, fileid);
-                    this->report_progress(tracker_address, fileid, 25);
-                    ClientIdCollection c;
-                    this->request_clients(tracker_address, fileid, 20, 90, c);
-                }
-#endif
+                //string tracker_address("localhost");
+                //string fileid("1234567890");
+                //if( ERROR_OK == this->login_tracker(tracker_address) ){
+                //    this->publish_resource_to_tracker(tracker_address, fileid);
+                //    this->report_progress(tracker_address, fileid, 25);
+                //    ClientIdCollection c;
+                //    this->request_clients(tracker_address, fileid, 20, 90, c);
+                //}
                 return Application::EXIT_OK;
 err:
                 return Application::EXIT_TEMPFAIL;
             }
 
-            NetTaskManager& CoolClient::download_manager(){
-                return this->downloadManager_;
-            }
+            //NetTaskManager& CoolClient::download_manager(){
+            //    return this->downloadManager_;
+            //}
 
-            NetTaskManager& CoolClient::upload_manager(){
-                return this->uploadManager_;
-            }
+            //NetTaskManager& CoolClient::upload_manager(){
+            //    return this->uploadManager_;
+            //}
 
             retcode_t CoolClient::login_tracker(const string& tracker_address, int port){
                 retcode_t ret = sockManager_->connect_tracker(tracker_address, port);
@@ -173,7 +170,7 @@ err:
             }
 
             retcode_t CoolClient::request_clients(const string& tracker_address, const string& fileid, int currentPercentage, 
-                int needCount, const ClientIdCollection& clientids){
+                int needCount, const ClientIdCollection& clientids, FileOwnerInfoPtrList* pInfoList){
                 LocalSockManager::SockPtr sock( sockManager_->get_tracker_sock(tracker_address ));
                 if( sock.isNull() ){
                     return ERROR_NET_CONNECT;

@@ -118,6 +118,10 @@ namespace CoolDown{
             return iter->second;
         }
 
+        string TorrentInfo::tracker_address() const{
+            return torrent_.trackeraddress();
+        }
+
         //DownloadInfo
         DownloadInfo::DownloadInfo()
         :is_finished(false),

@@ -33,7 +33,7 @@ namespace CoolDown{
     namespace Client{
 
         class CoolClient;
-        class NetTaskManager;
+        //class NetTaskManager;
 
         class ClientConnectionHandler{
             public:
@@ -55,7 +55,7 @@ namespace CoolDown{
                 SocketReactor& reactor_;
                 CoolClient& app_;
                 Logger& logger_;
-                NetTaskManager& uploadTaskManager_;
+                //NetTaskManager& uploadTaskManager_;
         };
     }
 }

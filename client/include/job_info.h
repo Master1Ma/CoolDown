@@ -80,6 +80,7 @@ namespace CoolDown{
                 int get_file_count() const;
                 const file_map_t& get_file_map() const;
                 const TorrentFileInfoPtr& get_file(const string& fileid);
+                string tracker_address() const;
 
             private:
                 Torrent::Torrent torrent_;

@@ -2,15 +2,20 @@
 #include "job_info.h"
 #include "local_sock_manager.h"
 #include "download_task.h"
+#include "client.h"
+#include "client.pb.h"
 #include <cstdlib>
 #include <vector>
 #include <algorithm>
+#include <Poco/Util/Application.h>
 #include <Poco/Observer.h>
 #include <Poco/Path.h>
 #include <Poco/File.h>
+//#include <Poco/Bugcheck.h>
 
 using std::vector;
 using std::min_element;
+using Poco::Util::Application;
 using Poco::Observer;
 using Poco::Path;
 using Poco::File;
@@ -19,7 +24,8 @@ namespace CoolDown{
     namespace Client{
 
         Job::Job(const JobInfoPtr& info, LocalSockManager& m, Logger& logger)
-        :jobInfoPtr_(info),
+        :app_( dynamic_cast<CoolClient&>( Application::instance() )),
+        jobInfoPtr_(info),
         jobInfo_(*jobInfoPtr_), 
         sockManager_(m), 
         cs_(jobInfo_, sockManager_), 
@@ -158,6 +164,33 @@ namespace CoolDown{
                 }
             }
 
+        }
+
+        retcode_t Job::request_clients(const string& fileid){
+            string tracker_address(jobInfo_.torrentInfo.tracker_address());
+            int percentage = jobInfo_.downloadInfo.percentage;
+            int needCount = 20;
+            CoolClient::ClientIdCollection clientidList;
+            JobInfo::owner_info_map_t& infoMap = jobInfo_.ownerInfoMap;
+            JobInfo::owner_info_map_t::iterator iter = infoMap.find(fileid);
+            if( iter != infoMap.end() ){
+                FileOwnerInfoPtrList& infoPtrList = iter->second;
+                for(int i = 0; i != infoPtrList.size(); ++i){
+                    clientidList.push_back(infoPtrList[i]->clientid);
+                }
+            }
+
+            FileOwnerInfoPtrList res;
+            retcode_t ret = app_.request_clients(tracker_address, fileid, percentage, 
+                                          needCount, clientidList, &res);
+            if( ret != ERROR_OK ){
+                poco_warning_f1(logger_, "app_.request_clients return %d", (int)ret);
+            }
+            return ret;
+        }
+
+        retcode_t Job::shake_hand(const string& fileid, const string& clientid){
+            return ERROR_OK;
         }
     }
 }

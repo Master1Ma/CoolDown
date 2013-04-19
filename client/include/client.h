@@ -4,6 +4,7 @@
 #include "error_code.h"
 #include "local_sock_manager.h"
 #include "net_task_manager.h"
+#include "job_info.h"
 #include <vector>
 #include <string>
 #include <Poco/Util/Application.h>
@@ -41,19 +42,22 @@ namespace CoolDown{
                     typedef LocalSockManager::LocalSockManagerPtr LocalSockManagerPtr;
                     typedef int make_torrent_progress_callback_t;
                     typedef SharedPtr<Job> JobPtr;
+
+                    //Application operations
                     void initialize(Application& self);
                     void uninitialize();
                     int main(const vector<string>& args);
 
-                    NetTaskManager& download_manager();
-                    NetTaskManager& upload_manager();
+                    //NetTaskManager& download_manager();
+                    //NetTaskManager& upload_manager();
 
+                    //communicate with tracker
                     retcode_t login_tracker(const string& tracker_address, int port = TRACKER_PORT);
                     retcode_t logout_tracker(const string& tracker_address, int port = TRACKER_PORT);
                     retcode_t publish_resource_to_tracker(const string& tracker_address, const string& fileid);
                     retcode_t report_progress(const string& tracker_address, const string& fileid, int percentage);
                     retcode_t request_clients(const string& tracker_address, const string& fileid, int currentPercentage, 
-                                          int needCount, const ClientIdCollection& clientids);
+                                          int needCount, const ClientIdCollection& clientids, FileOwnerInfoPtrList* pInfoList);
 
                     //job control
                     retcode_t add_job(const Torrent::Torrent& torrent, const string& top_path, int* internal_handle);
@@ -64,7 +68,7 @@ namespace CoolDown{
 
 
 
-                    //torrent operator
+                    //torrent operations
                     retcode_t parse_torrent(const Path& torrent_file_path, Torrent::Torrent* pTorrent);
                     retcode_t make_torrent(const Path& path, const Path& torrent_file_path, 
                             Int32 chunk_size, Int32 type, const string& tracker_address);
@@ -87,8 +91,8 @@ namespace CoolDown{
                     bool init_error_;
                     string clientid_;
                     LocalSockManagerPtr sockManager_;
-                    NetTaskManager downloadManager_;
-                    NetTaskManager uploadManager_;
+                    //NetTaskManager downloadManager_;
+                    //NetTaskManager uploadManager_;
 
                     int job_index_;
                     typedef map<int, JobPtr> JobMap;

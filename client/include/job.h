@@ -1,6 +1,7 @@
 #ifndef JOB_H
 #define JOB_H
 
+#include "error_code.h"
 #include "chunk_selector.h"
 #include <Poco/Logger.h>
 #include <Poco/Runnable.h>
@@ -9,6 +10,7 @@
 #include <Poco/TaskManager.h>
 #include <Poco/TaskNotification.h>
 #include <Poco/SharedPtr.h>
+
 using Poco::Logger;
 using Poco::Runnable;
 using Poco::FastMutex;
@@ -23,6 +25,7 @@ namespace CoolDown{
 
         class JobInfo;
         class LocalSockManager;
+        class CoolClient;
         typedef SharedPtr<JobInfo> JobInfoPtr;
 
         class Job : public Runnable{
@@ -37,6 +40,11 @@ namespace CoolDown{
                 const JobInfo& JobInfo() const;
 
             private:
+
+                retcode_t request_clients(const string& fileid);
+                retcode_t shake_hand(const string& fileid, const string& clientid);
+
+                CoolClient& app_;
                 JobInfoPtr jobInfoPtr_;
                 class JobInfo& jobInfo_;
                 LocalSockManager& sockManager_;
