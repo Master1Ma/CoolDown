@@ -8,7 +8,8 @@ namespace CoolDown{
     namespace Client{
 
         ChunkSelector::ChunkSelector(JobInfo& info, LocalSockManager& sockManager)
-        :jobInfo_(info), sockManager_(sockManager){
+        :jobInfo_(info){
+        //sockManager_(sockManager){
         }
         ChunkSelector::~ChunkSelector(){
         }

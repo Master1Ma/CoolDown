@@ -62,7 +62,7 @@ namespace CoolDown{
                     UNAVAILABLE = 0
                 };
                 JobInfo& jobInfo_;
-                LocalSockManager& sockManager_;
+                //LocalSockManager& sockManager_;
 
                 typedef priority_queue<ChunkInfoPtr, vector<ChunkInfoPtr>, chunk_cmp> chunk_priority_queue_t;
                 chunk_priority_queue_t chunk_queue_;

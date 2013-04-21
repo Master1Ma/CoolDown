@@ -5,7 +5,7 @@ message FileInfo{
     required int32 HasFile = 2;
     required int32 Percentage = 3;
     repeated uint64 FileBit = 4;
-    required int32 FileBitCount = 5
+    required int32 FileBitCount = 5;
 }
 
 message ShakeHand{
