@@ -58,10 +58,15 @@ namespace CoolDown{
             return this->jobInfo_;
         }
 
-        static void Job::convert_bitmap_to_transport_format(const file_bitmap_ptr& bitmap, ClientProto::FileInfo* pInfo){
-            
+        void Job::convert_bitmap_to_transport_format(const file_bitmap_ptr& bitmap, ClientProto::FileInfo* pInfo){
+            poco_assert( pInfo != NULL );
+            pInfo->set_filebitcount( bitmap->size() );
+            to_block_range( *bitmap, google::protobuf::RepeatedFieldBackInserter(pInfo->mutable_filebit()) );
         }
-        static void Job::conver_transport_format_bitmap(const ClientProto::FileInfo& info, file_bitmap_ptr& bitmap){
+
+        void Job::conver_transport_format_bitmap(const ClientProto::FileInfo& info, file_bitmap_ptr& bitmap){
+            bitmap.assign( new file_bitmap_t( info.filebit().begin(), info.filebit().end() ) );
+            bitmap->resize( info.filebitcount() );
         }
         
         void Job::onFinished(TaskFinishedNotification* pNf){
@@ -174,7 +179,8 @@ namespace CoolDown{
 
         retcode_t Job::request_clients(const string& fileid){
             string tracker_address(jobInfo_.torrentInfo.tracker_address());
-            int percentage = jobInfo_.downloadInfo.percentage;
+            poco_assert( jobInfo_.downloadInfo.percentage_map.find(fileid) != jobInfo_.downloadInfo.percentage_map.end() );
+            int percentage = jobInfo_.downloadInfo.percentage_map[fileid];
             int needCount = 20;
             CoolClient::ClientIdCollection clientidList;
             JobInfo::owner_info_map_t& infoMap = jobInfo_.ownerInfoMap;
@@ -192,6 +198,7 @@ namespace CoolDown{
             if( ret != ERROR_OK ){
                 poco_warning_f1(logger_, "app_.request_clients return %d", (int)ret);
             }else{
+                //remove all clients we already have and use the new client list
                 iter->second = res;
             }
             return ret;
@@ -199,12 +206,37 @@ namespace CoolDown{
 
         retcode_t Job::shake_hand(const string& fileid, const string& clientid){
             ShakeHand self;
+            //fill our info of this file
             self.set_clientid( app_.clientid() );
             FileInfo* pInfo = self.mutable_info();
             pInfo->set_fileid(fileid);
             pInfo->set_hasfile(1);
-            pInfo->set_percentage();
-            pInfo->
+            poco_assert( jobInfo_.downloadInfo.percentage_map.find(fileid) != jobInfo_.downloadInfo.percentage_map.end() );
+            pInfo->set_percentage(jobInfo_.downloadInfo.percentage_map[fileid]);
+            Job::convert_bitmap_to_transport_format(jobInfo_.downloadInfo.bitmap, pInfo);
+
+            ShakeHand peer;
+            //only fill the clientid as we only know
+            peer.set_clientid( clientid );
+            retcode_t ret = app_.shake_hand(self, peer);
+            if( ret != ERROR_OK ){
+                poco_warning_f2(logger_, "shake hand with peer error! fileid : %s, clientid : %s", fileid, clientid);
+                return ret;
+            }
+
+            //find the ownerinfolist of this file
+            JobInfo::owner_info_map_t& infoMap = jobInfo_.ownerInfoMap;
+            JobInfo::owner_info_map_t::iterator iter = infoMap.find(fileid);
+            poco_assert( iter != infoMap.end() );
+
+            //since all clients are in the list, we just update the bitmap of peer client
+            FileOwnerInfoPtrList& infoPtrList = iter->second;
+            FileOwnerInfoPtrList::iterator infoIter = find_if( infoPtrList.begin(), infoPtrList.end(), 
+                                                           FileOwnerInfoPtrSelector(clientid) );
+            FileOwnerInfoPtr info;
+            poco_assert( infoPtrList.end() != infoIter );
+            info = *infoIter;
+            Job::conver_transport_format_bitmap(peer.info(), info->bitmap_ptr);
 
             return ERROR_OK;
         }

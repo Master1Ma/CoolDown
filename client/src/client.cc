@@ -334,9 +334,18 @@ err:
                 poco_assert( sock.isNull() == false );
 
                 NetPack req( PAYLOAD_SHAKE_HAND, self );
-                req.sendBy( *sock );
+                retcode_t ret = req.sendBy( *sock );
+                if( ret != ERROR_OK ){
+                    poco_warning(logger(), "send shake_hand error.");
+                    return ret;
+                }
                 NetPack res;
-                res.receiveFrom( *sock );
+                ret = res.receiveFrom( *sock );
+                if( ret != ERROR_OK ){
+                    poco_warning(logger(), "receive shake_hand error.");
+                    return ret;
+                }
+
                 peer = *(res.message().cast<ShakeHand>());
                 return ERROR_OK;
             }

@@ -111,6 +111,19 @@ namespace CoolDown{
         typedef SharedPtr<FileOwnerInfo> FileOwnerInfoPtr;
         typedef vector<FileOwnerInfoPtr> FileOwnerInfoPtrList;
 
+        struct FileOwnerInfoPtrSelector{
+            FileOwnerInfoPtrSelector(const string& clientid)
+            :clientid_(clientid){
+            }
+
+            bool operator()(const FileOwnerInfoPtr& pInfo){
+                return pInfo->clientid == clientid_;
+            }
+
+            private:
+                string clientid_;
+        };
+
         struct DownloadInfo{
             DownloadInfo();
             atomic_bool is_finished;
@@ -131,7 +144,7 @@ namespace CoolDown{
             Condition download_pause_cond;
             FastMutex download_pause_mutex;
 
-            int percentage;
+            map<string, int> percentage_map;
             int max_parallel_task;
             file_bitmap_ptr bitmap;
         };
