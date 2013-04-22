@@ -97,6 +97,35 @@ namespace CoolDown{
         }
 
         void Job::run(){
+            vector<string> fileidlist( cs_.fileidlist() );
+            vector<string>::iterator iter = fileidlist.begin();
+            retcode_t ret = ERROR_OK;
+            while( iter != fileidlist.end() ){
+                string fileid(*iter);
+
+                ret = this->request_clients(fileid);
+                if( ret != ERROR_OK ){
+                    poco_warning_f1(logger_, "Cannot request_clients of fileid : %s", fileid);
+                }else{
+                    poco_debug_f1(logger_, "request_clients succeed, fileid : %s", fileid);
+                    
+                    FileOwnerInfoPtrList& infoList = jobInfo_.ownerInfoMap[fileid];
+                    FileOwnerInfoPtrList::iterator infoIter = infoList.begin();
+                    while( infoIter != infoList.end() ){
+                        retcode_t shake_hand_ret = this->shake_hand(fileid, (*infoIter)->clientid);
+                        if( shake_hand_ret != ERROR_OK ){
+                            poco_warning_f2(logger_, "Cannot shake hand with clientid : %s, fileid : %s",
+                                    (*infoIter)->clientid, fileid);
+                        }else{
+                            poco_debug_f2(logger_, "shake hand with client succeed, clientid : %s, fileid : %s",
+                                    (*infoIter)->clientid, fileid);
+                        }
+                        ++infoIter;
+                    }
+                }
+                ++iter;
+            }
+
             cs_.init_queue();
             while(1){
                 const static int WAIT_TIMEOUT = 1000;
@@ -190,6 +219,8 @@ namespace CoolDown{
                 for(int i = 0; i != infoPtrList.size(); ++i){
                     clientidList.push_back(infoPtrList[i]->clientid);
                 }
+            }else{
+                infoMap[fileid] = FileOwnerInfoPtrList();
             }
 
             FileOwnerInfoPtrList res;

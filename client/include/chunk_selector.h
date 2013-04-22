@@ -46,6 +46,7 @@ namespace CoolDown{
                 ChunkSelector(JobInfo& info, LocalSockManager& sockManager);
                 ~ChunkSelector();
 
+                vector<string> fileidlist();
                 void init_queue();
                 ChunkInfoPtr get_chunk();
                 void report_success_chunk(int chunk_num);

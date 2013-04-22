@@ -14,6 +14,17 @@ namespace CoolDown{
         ChunkSelector::~ChunkSelector(){
         }
 
+        vector<string> ChunkSelector::fileidlist(){
+            const TorrentInfo::file_map_t& fileMap = jobInfo_.torrentInfo.get_file_map();
+            TorrentInfo::file_map_t::const_iterator iter = fileMap.begin();
+            vector<string> fileids;
+            while( iter != fileMap.end() ) {
+                fileids.push_back(iter->first);
+                ++iter;
+            }
+            return fileids;
+        }
+
         void ChunkSelector::init_queue(){
             //remove all chunk in queue
             this->chunk_queue_ = chunk_priority_queue_t();
