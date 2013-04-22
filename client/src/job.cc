@@ -1,5 +1,4 @@
 #include "job.h"
-#include "job_info.h"
 #include "local_sock_manager.h"
 #include "download_task.h"
 #include "client.h"
@@ -19,6 +18,7 @@ using Poco::Util::Application;
 using Poco::Observer;
 using Poco::Path;
 using Poco::File;
+using namespace ClientProto;
 
 namespace CoolDown{
     namespace Client{
@@ -56,6 +56,12 @@ namespace CoolDown{
         }
         const JobInfo& Job::JobInfo() const{
             return this->jobInfo_;
+        }
+
+        static void Job::convert_bitmap_to_transport_format(const file_bitmap_ptr& bitmap, ClientProto::FileInfo* pInfo){
+            
+        }
+        static void Job::conver_transport_format_bitmap(const ClientProto::FileInfo& info, file_bitmap_ptr& bitmap){
         }
         
         void Job::onFinished(TaskFinishedNotification* pNf){
@@ -185,11 +191,21 @@ namespace CoolDown{
                                           needCount, clientidList, &res);
             if( ret != ERROR_OK ){
                 poco_warning_f1(logger_, "app_.request_clients return %d", (int)ret);
+            }else{
+                iter->second = res;
             }
             return ret;
         }
 
         retcode_t Job::shake_hand(const string& fileid, const string& clientid){
+            ShakeHand self;
+            self.set_clientid( app_.clientid() );
+            FileInfo* pInfo = self.mutable_info();
+            pInfo->set_fileid(fileid);
+            pInfo->set_hasfile(1);
+            pInfo->set_percentage();
+            pInfo->
+
             return ERROR_OK;
         }
     }

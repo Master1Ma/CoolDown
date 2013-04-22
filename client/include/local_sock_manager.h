@@ -67,7 +67,9 @@ namespace CoolDown{
             retcode_t connect_client(const string& clientid, const string& ip, int port);
             retcode_t close_connection_to_tracker(const string& tracker_address);
             bool reach_connection_limit(const string& clientid);
+            bool is_connected(const string& clientid);
 
+            
             //SockPtr get_sock(const string& clientid);
             SockPtr get_tracker_sock(const string& tracker_address);
             SockPtr get_idle_client_sock(const string& clientid);

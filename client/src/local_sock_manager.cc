@@ -149,6 +149,11 @@ namespace CoolDown{
             }
         }
 
+        bool LocalSockManager::is_connected(const string& clientid){
+            FastMutex::ScopedLock lock(client_sock_map_mutex_);
+            return client_sock_map_.end() == client_sock_map_.find(clientid);
+        }
+
         SockPtr LocalSockManager::get_tracker_sock(const string& tracker_address){
             server_sock_map_t::const_iterator iter = server_sock_map_.find(tracker_address);
             if( server_sock_map_.end() == iter ){

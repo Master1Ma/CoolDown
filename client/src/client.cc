@@ -5,6 +5,7 @@
 #include "tracker.pb.h"
 #include "torrent.pb.h"
 #include "verification.h"
+#include "client.pb.h"
 
 #include <fstream>
 #include <Poco/Logger.h>
@@ -14,6 +15,7 @@
 #include <Poco/DateTimeFormat.h>
 #include <Poco/DateTimeFormatter.h>
 #include <Poco/LocalDateTime.h>
+#include <Poco/Bugcheck.h>
 
 
 using std::ifstream;
@@ -23,6 +25,7 @@ using Poco::Exception;
 using Poco::Util::Application;
 using Poco::LocalDateTime;
 using namespace TrackerProto;
+using namespace ClientProto;
 
 namespace CoolDown{
     namespace Client{
@@ -171,10 +174,15 @@ err:
 
             retcode_t CoolClient::request_clients(const string& tracker_address, const string& fileid, int currentPercentage, 
                 int needCount, const ClientIdCollection& clientids, FileOwnerInfoPtrList* pInfoList){
+                poco_assert( pInfoList != NULL );
+                poco_assert( currentPercentage >= 0 );
+                poco_assert( needCount > 0 );
+
                 LocalSockManager::SockPtr sock( sockManager_->get_tracker_sock(tracker_address ));
                 if( sock.isNull() ){
                     return ERROR_NET_CONNECT;
                 }
+
                 QueryPeer msg;
                 msg.set_fileid(fileid);
                 msg.set_percentage(currentPercentage);
@@ -184,9 +192,25 @@ err:
                     msg.add_ownedclients(*iter);
                     ++iter;
                 }
+
                 SharedPtr<QueryPeerReply> r;
                 retcode_t ret = handle_reply_message< QueryPeerReply >( sock, msg, PAYLOAD_REQUEST_PEER, &r);
                 poco_notice_f1(logger(), "Recv %d clients by QueryPeer.", r->info().size());
+                if( ret != ERROR_OK || r->returncode() != ERROR_OK ){
+                    poco_warning_f2(logger(), "CoolClient::request_clients error. func ret : %d, request ret : %d",
+                            (int)ret, (int)r->returncode() );
+                    return ERROR_UNKNOWN;
+                }
+
+                int peer_count = r->info().size();
+                for( int pos = 0; pos != peer_count; ++pos ){
+                    const PeerFileInfo& peer = r->info().Get(pos);
+                    pInfoList->push_back( new FileOwnerInfo(
+                                peer.client().clientid(), 
+                                peer.client().ip(), 
+                                peer.client().messageport(),
+                                peer.percentage()) );
+                }
                 return ret;
             }
 
@@ -298,6 +322,22 @@ err:
                 poco_assert( torrent.SerializeToOstream(&ofs) );
                 ofs.close();
 
+                return ERROR_OK;
+            }
+
+            //communicate with client
+            retcode_t CoolClient::shake_hand(const ShakeHand& self, ShakeHand& peer){
+                string peer_clientid( peer.clientid() );
+                poco_assert( sockManager_->is_connected(peer_clientid) );
+
+                LocalSockManager::SockPtr sock( sockManager_->get_idle_client_sock(peer_clientid) );
+                poco_assert( sock.isNull() == false );
+
+                NetPack req( PAYLOAD_SHAKE_HAND, self );
+                req.sendBy( *sock );
+                NetPack res;
+                res.receiveFrom( *sock );
+                peer = *(res.message().cast<ShakeHand>());
                 return ERROR_OK;
             }
 

@@ -28,6 +28,10 @@ namespace Torrent{
     class Torrent;
 }
 
+namespace ClientProto{
+    class ShakeHand;
+}
+
 namespace CoolDown{
     namespace Client{
 
@@ -58,6 +62,9 @@ namespace CoolDown{
                     retcode_t report_progress(const string& tracker_address, const string& fileid, int percentage);
                     retcode_t request_clients(const string& tracker_address, const string& fileid, int currentPercentage, 
                                           int needCount, const ClientIdCollection& clientids, FileOwnerInfoPtrList* pInfoList);
+
+                    //communicate with client
+                    retcode_t shake_hand(const ClientProto::ShakeHand& self, ClientProto::ShakeHand& peer);
 
                     //job control
                     retcode_t add_job(const Torrent::Torrent& torrent, const string& top_path, int* internal_handle);

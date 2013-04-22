@@ -2,6 +2,7 @@
 #define JOB_H
 
 #include "error_code.h"
+#include "job_info.h"
 #include "chunk_selector.h"
 #include <Poco/Logger.h>
 #include <Poco/Runnable.h>
@@ -20,10 +21,12 @@ using Poco::TaskFinishedNotification;
 using Poco::TaskFailedNotification;
 using Poco::SharedPtr;
 
+namespace ClientProto{
+    class FileInfo;
+}
 namespace CoolDown{
     namespace Client{
 
-        class JobInfo;
         class LocalSockManager;
         class CoolClient;
         typedef SharedPtr<JobInfo> JobInfoPtr;
@@ -38,6 +41,9 @@ namespace CoolDown{
                 void onFailed(TaskFailedNotification* pNf);
                 JobInfoPtr MutableJobInfo();
                 const JobInfo& JobInfo() const;
+
+                static void convert_bitmap_to_transport_format(const file_bitmap_ptr& bitmap, ClientProto::FileInfo* pInfo);
+                static void conver_transport_format_bitmap(const ClientProto::FileInfo& info, file_bitmap_ptr& bitmap);
 
             private:
 
