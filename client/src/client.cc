@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <fstream>
+#include <boost/foreach.hpp>
 #include <Poco/Logger.h>
 #include <Poco/Exception.h>
 #include <Poco/Util/Application.h>
@@ -449,14 +450,11 @@ namespace CoolDown{
             }
 
             CoolClient::JobPtr CoolClient::get_job(const string& fileid){
-                JobMap::iterator iter = jobs_.begin();
-                while( iter != jobs_.end() ){
-                    const vector<string>& fileidlist = iter->second->JobInfo().fileidlist();
+                BOOST_FOREACH(JobMap::value_type& p, jobs_){
+                    const vector<string>& fileidlist = p.second->JobInfo().fileidlist();
                     if( fileidlist.end() != find(fileidlist.begin(), fileidlist.end(), fileid) ){
-                        return iter->second;
-                    }else{
+                        return p.second;
                     }
-                    ++iter;
                 }
                 return JobPtr(NULL);
             }
