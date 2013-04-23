@@ -72,9 +72,14 @@ namespace CoolDown{
                 if( args.size() != 2 ){
                     return Application::EXIT_USAGE;
                 }
+                string tracker_address("127.0.0.1");
+                if( ERROR_OK != this->login_tracker(tracker_address) ){
+                    poco_warning_f1(logger(), "cannot login tracker : %s", tracker_address);
+                }
+
                 int handle = -1;
                 retcode_t ret = this->make_torrent(args[0], args[1],
-                        1 << 20, 0, "localhost:9977");
+                        1 << 20, 0, "127.0.0.1:9977");
                 poco_debug_f1(logger(), "make_torrent retcode : %d", (int)ret);
 
                 Torrent::Torrent torrent;
@@ -97,6 +102,8 @@ namespace CoolDown{
                 }
 
                 jobThreads_.joinAll();
+
+                this->logout_tracker("127.0.0.1");
 
 #endif
                 //string tracker_address("localhost");
@@ -126,7 +133,9 @@ err:
                     poco_warning_f3(logger(), "Cannot connect tracker, ret : %hd, addr : %s, port : %d.", ret, tracker_address, port);
                     return ret;
                 }
-                LocalSockManager::SockPtr sock( sockManager_->get_tracker_sock( tracker_address ) );
+                LocalSockManager::SockPtr sock( sockManager_->get_tracker_sock( format("%s:%d", tracker_address, port)) );
+                poco_assert( sock.isNull() == false );
+
                 Login msg;
                 msg.set_clientid( this->clientid() );
                 SharedPtr<MessageReply> r;
@@ -136,7 +145,7 @@ err:
             }
 
             retcode_t CoolClient::logout_tracker(const string& tracker_address, int port){
-                LocalSockManager::SockPtr sock( sockManager_->get_tracker_sock(tracker_address) );
+                LocalSockManager::SockPtr sock( sockManager_->get_tracker_sock( format("%s:%d", tracker_address, port)) );
                 if( sock.isNull() ){
                     return ERROR_NET_CONNECT;
                 }
@@ -242,13 +251,13 @@ err:
                     }
 
                     if( (*out)->returncode() != ERROR_OK ){
-                        error_msg = "Invalid return code from tracker";
+                        error_msg = format("Invalid message return code %d from tracker", int((*out)->returncode()) );
                         goto err;
                     }
                     return ERROR_OK;
     err:
                     poco_warning_f3(logger(), "in handle_reply_message: %s, ret:%d, remote addr:%s", 
-                            error_msg, ret, sock->peerAddress().toString());
+                            error_msg, (int)ret, sock->peerAddress().toString());
                     return ret;
                 
             }
