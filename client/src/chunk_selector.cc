@@ -15,6 +15,7 @@ namespace CoolDown{
         }
 
         vector<string> ChunkSelector::fileidlist(){
+            /*
             const TorrentInfo::file_map_t& fileMap = jobInfo_.torrentInfo.get_file_map();
             TorrentInfo::file_map_t::const_iterator iter = fileMap.begin();
             vector<string> fileids;
@@ -23,6 +24,8 @@ namespace CoolDown{
                 ++iter;
             }
             return fileids;
+            */
+            return jobInfo_.fileidlist();
         }
 
         void ChunkSelector::init_queue(){

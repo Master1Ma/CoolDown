@@ -33,6 +33,7 @@ namespace CoolDown{
     namespace Client{
 
         class CoolClient;
+        class UploadTask;
         //class NetTaskManager;
 
         class ClientConnectionHandler{
@@ -47,7 +48,7 @@ namespace CoolDown{
             private:
                 void Process(const NetPack& in, NetPack* out);
 
-                retcode_t HandleUploadRequest(const SharedPtr<Message>& in, UploadReply* reply);
+                retcode_t HandleUploadRequest(const SharedPtr<Message>& in, UploadReply* reply, UploadTask* pTask);
                 retcode_t HandleShakeHand(const SharedPtr<Message>& in, ShakeHand* reply);
 
                 StreamSocket sock_;
@@ -56,6 +57,8 @@ namespace CoolDown{
                 CoolClient& app_;
                 Logger& logger_;
                 //NetTaskManager& uploadTaskManager_;
+                bool last_request_upload;
+                UploadTask* pTask;
         };
     }
 }

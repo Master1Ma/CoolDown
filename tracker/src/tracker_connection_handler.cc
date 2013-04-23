@@ -137,7 +137,7 @@ retcode_t TrackerConnectionHandler::HandleLogin(SharedPtr<Message> in, MessageRe
         return ERROR_PROTO_TYPE_ERROR;
     }
 
-    string ip = loginProto->has_loginip() ? loginProto->loginip() : sock_.peerAddress().toString();
+    string ip = loginProto->has_loginip() ? loginProto->loginip() : sock_.peerAddress().host().toString();
     this->clientid = loginProto->clientid();
     Tracker::ClientPtr client( new ClientInfo(loginProto->clientid(), ip, loginProto->messageport()) );
     ret = app_.AddOnlineUser(client);

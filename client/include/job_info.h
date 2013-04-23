@@ -155,12 +155,14 @@ namespace CoolDown{
             private:
                 CoolClient& app_;
                 Logger& logger_;
+                vector<string> fileidlist_;
 
             public:
                 JobInfo(const Torrent::Torrent& torrent, const string& top_path);
                 ~JobInfo();
 
                 string clientid() const;
+                const vector<string>& fileidlist() const;
 
                 //key : fileid, value : FileOwnerInfo
                 typedef map<string, FileOwnerInfoPtrList> owner_info_map_t;

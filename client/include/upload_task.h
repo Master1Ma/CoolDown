@@ -21,16 +21,23 @@ namespace CoolDown{
 
         class UploadTask : public Task{
             public:
-                UploadTask(const FilePtr& file, UInt64 offset, int chunk_size, const SockPtr& sock);
+                UploadTask(const FilePtr& file, UInt64 offset, int chunk_size, StreamSocket& sock);
                 ~UploadTask();
 
                 void runTask();
+                UInt64 offset() const{
+                    return this->offset_;
+                }
+
+                int chunk_size() const{
+                    return this->chunk_size_;
+                }
 
             private:
                 FilePtr file_;
                 UInt64 offset_;
                 int chunk_size_;
-                SockPtr sock_;
+                StreamSocket& sock_;
 
         };
     }

@@ -22,6 +22,7 @@ using Poco::Path;
 using Poco::File;
 using Poco::Int32;
 using Poco::Int64;
+using Poco::TaskManager;
 using Poco::ThreadPool;
 
 namespace Torrent{
@@ -53,7 +54,7 @@ namespace CoolDown{
                     int main(const vector<string>& args);
 
                     //NetTaskManager& download_manager();
-                    //NetTaskManager& upload_manager();
+                    NetTaskManager& upload_manager();
 
                     //communicate with tracker
                     retcode_t login_tracker(const string& tracker_address, int port = TRACKER_PORT);
@@ -71,6 +72,8 @@ namespace CoolDown{
                     retcode_t start_job(int handle);
                     retcode_t pause_download(int handle);
                     retcode_t resume_download(int handle);
+                    JobPtr get_job(const string& fileid);
+
                     
 
 
@@ -98,13 +101,14 @@ namespace CoolDown{
                     bool init_error_;
                     string clientid_;
                     LocalSockManagerPtr sockManager_;
-                    //NetTaskManager downloadManager_;
-                    //NetTaskManager uploadManager_;
 
                     int job_index_;
                     typedef map<int, JobPtr> JobMap;
                     JobMap jobs_;
                     ThreadPool jobThreads_;
+
+                    //NetTaskManager downloadManager_;
+                    NetTaskManager uploadManager_;
 
                     make_torrent_progress_callback_t make_torrent_progress_callback_;
 

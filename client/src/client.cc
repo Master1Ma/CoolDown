@@ -7,6 +7,7 @@
 #include "verification.h"
 #include "client.pb.h"
 
+#include <algorithm>
 #include <fstream>
 #include <Poco/Logger.h>
 #include <Poco/Exception.h>
@@ -18,6 +19,7 @@
 #include <Poco/Bugcheck.h>
 
 
+using std::find;
 using std::ifstream;
 using std::ofstream;
 using Poco::Logger;
@@ -31,7 +33,8 @@ namespace CoolDown{
     namespace Client{
             CoolClient::CoolClient(int argc, char* argv[])
             :Application(argc, argv),
-            jobThreads_("JobThreadPool"){
+            jobThreads_("JobThreadPool"),
+            uploadManager_(logger()){
             }
 
             void CoolClient::initialize(Application& self){
@@ -113,9 +116,9 @@ err:
             //    return this->downloadManager_;
             //}
 
-            //NetTaskManager& CoolClient::upload_manager(){
-            //    return this->uploadManager_;
-            //}
+            NetTaskManager& CoolClient::upload_manager(){
+                return this->uploadManager_;
+            }
 
             retcode_t CoolClient::login_tracker(const string& tracker_address, int port){
                 retcode_t ret = sockManager_->connect_tracker(tracker_address, port);
@@ -385,6 +388,19 @@ err:
                 }
                 iter->second->MutableJobInfo()->downloadInfo.is_download_paused = false;
                 return ERROR_OK;
+            }
+
+            CoolClient::JobPtr CoolClient::get_job(const string& fileid){
+                JobMap::iterator iter = jobs_.begin();
+                while( iter != jobs_.end() ){
+                    const vector<string>& fileidlist = iter->second->JobInfo().fileidlist();
+                    if( fileidlist.end() != find(fileidlist.begin(), fileidlist.end(), fileid) ){
+                        return iter->second;
+                    }else{
+                    }
+                    ++iter;
+                }
+                return JobPtr(NULL);
             }
 
             retcode_t CoolClient::parse_torrent(const Path& torrent_file_path, Torrent::Torrent* pTorrent){

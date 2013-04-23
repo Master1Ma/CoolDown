@@ -1,12 +1,21 @@
 #include "job_info.h"
 #include "client.h"
+#include <algorithm>
+#include <iterator>
 #include <Poco/Util/Application.h>
 #include <Poco/Bugcheck.h>
 
+using std::back_inserter;
 using Poco::Util::Application;
+
 
 namespace CoolDown{
     namespace Client{
+        namespace{
+            string retrieve_fileid(const Torrent::File& file){
+                return file.checksum();
+            }
+        }
 
         //LocalFileInfo
         LocalFileInfo::LocalFileInfo(const string& top_path)
@@ -137,6 +146,7 @@ namespace CoolDown{
          localFileInfo(top_path),
          torrentInfo(torrent)
         {
+            transform(torrent.file().begin(), torrent.file().end(), back_inserter(fileidlist_), retrieve_fileid);
         }
 
         JobInfo::~JobInfo(){
@@ -144,6 +154,10 @@ namespace CoolDown{
 
         string JobInfo::clientid() const{
             return app_.clientid();
+        }
+
+        const vector<string>& JobInfo::fileidlist() const{
+            return this->fileidlist_;
         }
 
     }
