@@ -105,6 +105,7 @@ namespace CoolDown{
                         }
                     }
                     this->logout_tracker(tracker_ip, TRACKER_PORT);
+
                 }else if( args.size() == 2 ){
                     if( ERROR_OK != this->login_tracker(tracker_ip, CoolClient::TRACKER_PORT) ){
                         poco_warning_f1(logger(), "cannot login tracker : %s", tracker_address);
@@ -125,6 +126,14 @@ namespace CoolDown{
                             retcode_t publish_ret = this->publish_resource_to_tracker(tracker_address, fileid );
                             poco_debug_f2(logger(), "publish resource '%s' return code %d.", fileid, (int)publish_ret);
                         }
+
+                        int handle = -1;
+                        Torrent::Torrent torrent;
+                        retcode_t ret = this->parse_torrent( args[0], &torrent );
+                        poco_debug_f1(logger(), "parse_torrent retcode : %d", (int)ret);
+
+                        ret = this->add_job(torrent, "/tmp/", &handle);
+                        poco_debug_f1(logger(), "add_job retcode : %d", (int)ret);
 
                         poco_debug_f1(logger(), "client listen on port : %d", LOCAL_PORT);
                         ServerSocket svs(LOCAL_PORT);
