@@ -133,6 +133,7 @@ retcode_t Tracker::RequestClients(const string& fileid, int percentage, int need
         const ClientIdCollection& ownedClientIdList, ClientFileInfoCollection* clients){
     clients->clear();
     if( fileid.empty() || percentage < 0 || percentage > 100 || needCount < 0 || clients == NULL){
+        poco_warning(logger(), "invalid arg for Tracker::RequestClients.");
         return ERROR_UNKNOWN;
     }
     /*
@@ -148,6 +149,8 @@ retcode_t Tracker::RequestClients(const string& fileid, int percentage, int need
             return ret;
         }
     }
+
+    poco_debug_f2(logger(), "request clients for %s return %u clients", fileid, clients->size());
     return ERROR_OK;
 }
 

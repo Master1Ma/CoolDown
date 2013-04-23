@@ -97,6 +97,7 @@ namespace CoolDown{
         }
 
         void Job::run(){
+            poco_debug(logger_, "Job start running!");
             vector<string> fileidlist( cs_.fileidlist() );
             vector<string>::iterator iter = fileidlist.begin();
             retcode_t ret = ERROR_OK;
@@ -104,32 +105,37 @@ namespace CoolDown{
                 string fileid(*iter);
 
                 ret = this->request_clients(fileid);
-                if( ret != ERROR_OK ){
-                    poco_warning_f1(logger_, "Cannot request_clients of fileid : %s", fileid);
-                }else{
-                    poco_debug_f1(logger_, "request_clients succeed, fileid : %s", fileid);
-                    
-                    FileOwnerInfoPtrList& infoList = jobInfo_.ownerInfoMap[fileid];
-                    FileOwnerInfoPtrList::iterator infoIter = infoList.begin();
-                    while( infoIter != infoList.end() ){
-                        retcode_t shake_hand_ret = this->shake_hand(fileid, (*infoIter)->clientid);
-                        if( shake_hand_ret != ERROR_OK ){
-                            poco_warning_f2(logger_, "Cannot shake hand with clientid : %s, fileid : %s",
-                                    (*infoIter)->clientid, fileid);
-                        }else{
-                            poco_debug_f2(logger_, "shake hand with client succeed, clientid : %s, fileid : %s",
-                                    (*infoIter)->clientid, fileid);
+                poco_debug_f2(logger_, "request clients for fileid : %s, return code : %d", fileid, (int)ret);
+                if( ret == ERROR_FILE_NO_OWNER_ONLINE ){
+                    poco_debug_f1(logger_, "no online client has file : %s", fileid);
+                }else
+                    if( ret != ERROR_OK ){
+                        poco_warning_f1(logger_, "Cannot request_clients of fileid : %s", fileid);
+                    }else{
+                        poco_debug_f1(logger_, "request_clients succeed, fileid : %s", fileid);
+                        
+                        FileOwnerInfoPtrList& infoList = jobInfo_.ownerInfoMap[fileid];
+                        FileOwnerInfoPtrList::iterator infoIter = infoList.begin();
+                        while( infoIter != infoList.end() ){
+                            retcode_t shake_hand_ret = this->shake_hand(fileid, (*infoIter)->clientid);
+                            if( shake_hand_ret != ERROR_OK ){
+                                poco_warning_f2(logger_, "Cannot shake hand with clientid : %s, fileid : %s",
+                                        (*infoIter)->clientid, fileid);
+                            }else{
+                                poco_debug_f2(logger_, "shake hand with client succeed, clientid : %s, fileid : %s",
+                                        (*infoIter)->clientid, fileid);
+                            }
+                            ++infoIter;
                         }
-                        ++infoIter;
                     }
-                }
                 ++iter;
             }
 
+            poco_debug(logger_, "Before init_queue.");
             cs_.init_queue();
             while(1){
                 const static int WAIT_TIMEOUT = 1000;
-                poco_debug(logger_, "enter Job::run()");
+                poco_debug(logger_, "enter Job::run() while(1)");
                 //see if the Job(upload&download) has been shutdown
                 if( jobInfo_.downloadInfo.is_finished ){
                     break;
@@ -203,12 +209,14 @@ namespace CoolDown{
                     }
                 }
             }
-
+            poco_debug(logger_, "Job finished!");
         }
 
         retcode_t Job::request_clients(const string& fileid){
             string tracker_address(jobInfo_.torrentInfo.tracker_address());
+            poco_debug_f1(logger_, "going to request clients from %s", tracker_address);
             poco_assert( jobInfo_.downloadInfo.percentage_map.find(fileid) != jobInfo_.downloadInfo.percentage_map.end() );
+            poco_debug_f2(logger_, "assert passed at file : %s, line : %d", string(__FILE__), __LINE__);
             int percentage = jobInfo_.downloadInfo.percentage_map[fileid];
             int needCount = 20;
             CoolClient::ClientIdCollection clientidList;
@@ -229,6 +237,10 @@ namespace CoolDown{
             if( ret != ERROR_OK ){
                 poco_warning_f1(logger_, "app_.request_clients return %d", (int)ret);
             }else{
+                poco_debug_f2(logger_, "request clients return %u clients of fileid : %s", res.size(), fileid);
+                if( res.size() == 0 ){
+                    return ERROR_FILE_NO_OWNER_ONLINE;
+                }
                 //remove all clients we already have and use the new client list
                 iter->second = res;
             }

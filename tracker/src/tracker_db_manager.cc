@@ -51,7 +51,7 @@ retcode_t TrackerDBManager::update_logout_info(const string& clientid, Int64 dow
     FastMutex::ScopedLock lock(mutex_);
     using namespace Poco::Data;
     string sql;
-    format(sql, "UPDATE %s SET UPLOADTOTAL = UPLOADTOTAL + ?, DOWNLOADTOTAL = DOWNLOADTOTAL + ? WHERE CLIENTID=?", clientInfoTableName_);
+    format(sql, "UPDATE %s SET ISONLINE = 0, UPLOADTOTAL = UPLOADTOTAL + ?, DOWNLOADTOTAL = DOWNLOADTOTAL + ? WHERE CLIENTID=?", clientInfoTableName_);
     session_ << sql, use(downloadTotal), use(uploadTotal), use(clientid), now;
     return ERROR_OK;
 }

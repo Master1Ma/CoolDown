@@ -147,6 +147,9 @@ namespace CoolDown{
          torrentInfo(torrent)
         {
             transform(torrent.file().begin(), torrent.file().end(), back_inserter(fileidlist_), retrieve_fileid);
+            for(int i = 0; i != fileidlist_.size(); ++i){
+                downloadInfo.percentage_map[fileidlist_[i]] = 0;
+            }
         }
 
         JobInfo::~JobInfo(){

@@ -28,7 +28,8 @@ namespace CoolDown{
                 return ERROR_NET_CONNECT;
             }
             FastMutex::ScopedLock lock(server_sock_map_mutex_);
-            server_sock_map_[tracker_address] = tracker_sock;
+            poco_debug_f1(logger_, "connect to tracker succeed, key : %s", tracker_sock->peerAddress().toString());
+            server_sock_map_[tracker_sock->peerAddress().toString()] = tracker_sock;
             return ERROR_OK;
         }
 
@@ -38,7 +39,7 @@ namespace CoolDown{
                 return ERROR_NET_NOT_CONNECTED;
             }
             FastMutex::ScopedLock lock(server_sock_map_mutex_);
-            server_sock_map_.erase(tracker_address);
+            server_sock_map_.erase(sock->peerAddress().toString());
             return ERROR_OK;
         }
 

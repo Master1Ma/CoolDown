@@ -171,6 +171,7 @@ retcode_t TrackerConnectionHandler::HandleLogOut(SharedPtr<Message> in, MessageR
                 logoutProto->clientid(), sock_.peerAddress().toString(), ret);
         return ret;
     }
+    out->set_returncode(ERROR_OK);
     return ERROR_OK;
 }
 
