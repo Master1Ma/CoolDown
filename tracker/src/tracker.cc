@@ -91,11 +91,6 @@ int Tracker::main(const std::vector<std::string>& args)
 
         ServerSocket svs(port);
         svs.setReusePort(false);
-#if 0
-        ServerSocket svs;
-        svs.setReusePort(false);
-        svs.bind(port);
-#endif
 
         SocketReactor reactor;
         SocketAcceptor<TrackerConnectionHandler> acceptor(svs, reactor);

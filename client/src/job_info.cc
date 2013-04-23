@@ -135,7 +135,8 @@ namespace CoolDown{
         DownloadInfo::DownloadInfo()
         :is_finished(false),
         is_download_paused(true),
-        is_upload_paused(true)
+        is_upload_paused(true),
+        bitmap(new file_bitmap_t)
         {
         }
 

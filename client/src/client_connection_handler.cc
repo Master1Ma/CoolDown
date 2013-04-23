@@ -98,6 +98,7 @@ err:
                     if( ret != ERROR_OK ){
                         poco_warning_f1(logger_, "HandleShakeHand failed with ret : %d", (int)ret);
                     }else{
+                        poco_debug(logger_, "HandlehakeHand succeed!" );
                     }
 
                     out->set_message(PAYLOAD_SHAKE_HAND, sh);

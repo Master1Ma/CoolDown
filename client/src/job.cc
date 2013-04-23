@@ -59,7 +59,9 @@ namespace CoolDown{
         }
 
         void Job::convert_bitmap_to_transport_format(const file_bitmap_ptr& bitmap, ClientProto::FileInfo* pInfo){
+            using namespace std;
             poco_assert( pInfo != NULL );
+            poco_assert( bitmap.isNull() == false );
             pInfo->set_filebitcount( bitmap->size() );
             to_block_range( *bitmap, google::protobuf::RepeatedFieldBackInserter(pInfo->mutable_filebit()) );
         }
@@ -116,7 +118,21 @@ namespace CoolDown{
                         
                         FileOwnerInfoPtrList& infoList = jobInfo_.ownerInfoMap[fileid];
                         FileOwnerInfoPtrList::iterator infoIter = infoList.begin();
+                        poco_debug(logger_, "Before walk FileOwnerInfoPtrList to shake_hand");
                         while( infoIter != infoList.end() ){
+                            if( !sockManager_.is_connected((*infoIter)->clientid) ){
+                                retcode_t conn_ret = sockManager_.connect_client(
+                                        (*infoIter)->clientid, (*infoIter)->ip, (*infoIter)->message_port);
+                                poco_debug_f1(logger_, "connect_client return %d.", (int)conn_ret);
+
+                                if( conn_ret != ERROR_OK ){
+                                    poco_warning_f3(logger_, "Cannot connect client, id : %s, ip :%s, port : %d",
+                                            (*infoIter)->clientid, (*infoIter)->ip, (*infoIter)->message_port);
+                                }
+                            }else{
+                                poco_debug_f1(logger_, "already connect to %s, no need to connect again", (*infoIter)->clientid);
+                            }
+
                             retcode_t shake_hand_ret = this->shake_hand(fileid, (*infoIter)->clientid);
                             if( shake_hand_ret != ERROR_OK ){
                                 poco_warning_f2(logger_, "Cannot shake hand with clientid : %s, fileid : %s",
@@ -237,12 +253,12 @@ namespace CoolDown{
             if( ret != ERROR_OK ){
                 poco_warning_f1(logger_, "app_.request_clients return %d", (int)ret);
             }else{
-                poco_debug_f2(logger_, "request clients return %u clients of fileid : %s", res.size(), fileid);
+                poco_debug_f2(logger_, "request clients return %d clients of fileid : %s", (int)res.size(), fileid);
                 if( res.size() == 0 ){
                     return ERROR_FILE_NO_OWNER_ONLINE;
                 }
                 //remove all clients we already have and use the new client list
-                iter->second = res;
+                infoMap[fileid] = res;
             }
             return ret;
         }
@@ -255,22 +271,26 @@ namespace CoolDown{
             pInfo->set_fileid(fileid);
             pInfo->set_hasfile(1);
             poco_assert( jobInfo_.downloadInfo.percentage_map.find(fileid) != jobInfo_.downloadInfo.percentage_map.end() );
+            poco_debug_f2(logger_, "assert passed at file : %s, line : %d", string(__FILE__), __LINE__);
             pInfo->set_percentage(jobInfo_.downloadInfo.percentage_map[fileid]);
             Job::convert_bitmap_to_transport_format(jobInfo_.downloadInfo.bitmap, pInfo);
 
             ShakeHand peer;
             //only fill the clientid as we only know
             peer.set_clientid( clientid );
+            poco_trace_f1(logger_, "before shake_hand with client '%s'", clientid);
             retcode_t ret = app_.shake_hand(self, peer);
             if( ret != ERROR_OK ){
                 poco_warning_f2(logger_, "shake hand with peer error! fileid : %s, clientid : %s", fileid, clientid);
                 return ret;
             }
+            poco_debug_f2(logger_, "shake hand with peer succeed! fileid : %s, clientid : %s", fileid, clientid);
 
             //find the ownerinfolist of this file
             JobInfo::owner_info_map_t& infoMap = jobInfo_.ownerInfoMap;
             JobInfo::owner_info_map_t::iterator iter = infoMap.find(fileid);
             poco_assert( iter != infoMap.end() );
+            poco_debug_f2(logger_, "assert passed at file : %s, line : %d", string(__FILE__), __LINE__);
 
             //since all clients are in the list, we just update the bitmap of peer client
             FileOwnerInfoPtrList& infoPtrList = iter->second;
@@ -278,6 +298,7 @@ namespace CoolDown{
                                                            FileOwnerInfoPtrSelector(clientid) );
             FileOwnerInfoPtr info;
             poco_assert( infoPtrList.end() != infoIter );
+            poco_debug_f2(logger_, "assert passed at file : %s, line : %d", string(__FILE__), __LINE__);
             info = *infoIter;
             Job::conver_transport_format_bitmap(peer.info(), info->bitmap_ptr);
 

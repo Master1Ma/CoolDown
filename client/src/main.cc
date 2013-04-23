@@ -12,8 +12,8 @@ using CoolDown::Client::CoolClient;
 
 int main(int argc, char* argv[]){
     try{
-        CoolClient c(argc, argv);
-        return c.run();
+        CoolClient c;
+        return c.run(argc, argv);
     }catch(Exception& e){
         cerr << e.message() << endl;
     }

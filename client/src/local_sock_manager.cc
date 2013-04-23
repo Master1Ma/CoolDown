@@ -54,6 +54,9 @@ namespace CoolDown{
             if( sock.isNull() ){
                 return ERROR_NET_CONNECT;
             }
+
+            poco_debug_f3(logger_, "connect to client succeed, id : %s, ip : %s, port : %d",
+                    clientid, ip, port);
             client_sock_map_[clientid].push_back(std::make_pair(sock, IDLE) );
 
             return ERROR_OK;
@@ -92,12 +95,14 @@ namespace CoolDown{
 
             FastMutex::ScopedLock lock(client_sock_map_mutex_);
 
+
             client_sock_map_t::iterator listIter = client_sock_map_.find(clientid);
             if( listIter == client_sock_map_.end() ){
-                poco_warning_f1(logger_, "get idle sock of unconnected client, client id :%s", clientid);
+            //if( this->is_connected( clientid ) == false ){
+                poco_warning_f1(logger_, "get idle sock of unconnected client, client id : '%s'", clientid);
                 return SockPtr();
             }
-            SockList& sockList = listIter->second;
+            SockList& sockList = client_sock_map_[clientid];
 
             SockList::iterator sockIter = find_if(sockList.begin(), sockList.end(), 
                     IdleSockSelector());
@@ -152,7 +157,7 @@ namespace CoolDown{
 
         bool LocalSockManager::is_connected(const string& clientid){
             FastMutex::ScopedLock lock(client_sock_map_mutex_);
-            return client_sock_map_.end() == client_sock_map_.find(clientid);
+            return client_sock_map_.end() != client_sock_map_.find(clientid);
         }
 
         SockPtr LocalSockManager::get_tracker_sock(const string& tracker_address){

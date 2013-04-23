@@ -6,6 +6,7 @@
 #include "torrent.pb.h"
 #include "verification.h"
 #include "client.pb.h"
+#include "client_connection_handler.h"
 
 #include <algorithm>
 #include <fstream>
@@ -17,6 +18,10 @@
 #include <Poco/DateTimeFormatter.h>
 #include <Poco/LocalDateTime.h>
 #include <Poco/Bugcheck.h>
+#include <Poco/Net/ServerSocket.h>
+#include <Poco/Net/SocketReactor.h>
+#include <Poco/Net/SocketAcceptor.h>
+#include <Poco/Thread.h>
 
 
 using std::find;
@@ -26,23 +31,27 @@ using Poco::Logger;
 using Poco::Exception;
 using Poco::Util::Application;
 using Poco::LocalDateTime;
+using Poco::Net::ServerSocket;
+using Poco::Net::SocketReactor;
+using Poco::Net::SocketAcceptor;
+using Poco::Thread;
 using namespace TrackerProto;
 using namespace ClientProto;
 
 namespace CoolDown{
     namespace Client{
-            CoolClient::CoolClient(int argc, char* argv[])
-            :Application(argc, argv),
-            jobThreads_("JobThreadPool"),
+            CoolClient::CoolClient()
+            :jobThreads_("JobThreadPool"),
             uploadManager_(logger()){
             }
 
             void CoolClient::initialize(Application& self){
                 loadConfiguration();
-                Application::initialize(self);
+                ServerApplication::initialize(self);
 
                 setLogger(Logger::get("ConsoleLogger"));
 
+                LOCAL_PORT = (unsigned short) config().getInt("client.message_port", 9025);
                 this->init_error_ = false;
                 this->clientid_ = Verification::get_verification_code( Poco::Environment::nodeId() );
                 string msg;
@@ -61,62 +70,90 @@ namespace CoolDown{
             }
 
             void CoolClient::uninitialize(){
-                Application::uninitialize();
+                ServerApplication::uninitialize();
             }
 
             int CoolClient::main(const vector<string>& args){
                 if( this->init_error_ ){
                     return Application::EXIT_TEMPFAIL;
                 }
-#if 1
-                if( args.size() != 2 ){
-                    return Application::EXIT_USAGE;
+
+                string tracker_ip("127.0.0.1");
+                string tracker_address( format("%s:%d", tracker_ip, (int)CoolClient::TRACKER_PORT) );
+
+                if( args.size() == 1 ){
+
+                    this->clientid_ = "0123456789012345678901234567890123456789";
+                    if( ERROR_OK != this->login_tracker(tracker_ip, CoolClient::TRACKER_PORT) ){
+                        poco_warning_f1(logger(), "cannot login tracker : %s", tracker_address);
+                    }
+
+                    int handle = -1;
+                    Torrent::Torrent torrent;
+                    retcode_t ret = this->parse_torrent( args[0], &torrent );
+                    poco_debug_f1(logger(), "parse_torrent retcode : %d", (int)ret);
+
+                    ret = this->add_job(torrent, "/tmp/", &handle);
+                    poco_debug_f1(logger(), "add_job retcode : %d", (int)ret);
+                    if( ret != ERROR_OK ){
+                    }else{
+                        ret = this->start_job(handle);
+                        poco_debug_f1(logger(), "start_job retcode : %d", (int)ret);
+                        if( ret != ERROR_OK ){
+                        }else{
+                            jobThreads_.joinAll();
+                        }
+                    }
+                    this->logout_tracker(tracker_ip, TRACKER_PORT);
+                }else if( args.size() == 2 ){
+                    if( ERROR_OK != this->login_tracker(tracker_ip, CoolClient::TRACKER_PORT) ){
+                        poco_warning_f1(logger(), "cannot login tracker : %s", tracker_address);
+                    }
+
+                    retcode_t ret = this->make_torrent(args[0], args[1],
+                            1 << 20, 0, tracker_address);
+                    poco_debug_f1(logger(), "make_torrent retcode : %d", (int)ret);
+
+                    Torrent::Torrent torrent;
+                    ret = this->parse_torrent( args[1], &torrent );
+                    poco_debug_f1(logger(), "parse_torrent retcode : %d", (int)ret);
+                    if( ret != ERROR_OK){
+                        return Application::EXIT_TEMPFAIL;
+                    }else{
+                        for(int i = 0; i != torrent.file().size(); ++i){
+                            string fileid( torrent.file().Get(i).checksum() );
+                            retcode_t publish_ret = this->publish_resource_to_tracker(tracker_address, fileid );
+                            poco_debug_f2(logger(), "publish resource '%s' return code %d.", fileid, (int)publish_ret);
+                        }
+
+                        poco_debug_f1(logger(), "client listen on port : %d", LOCAL_PORT);
+                        ServerSocket svs(LOCAL_PORT);
+                        svs.setReusePort(false);
+
+                        SocketReactor reactor;
+                        SocketAcceptor<ClientConnectionHandler> acceptor(svs, reactor);
+
+
+                        Thread thread;
+                        thread.start(reactor);
+
+                        waitForTerminationRequest();
+
+                        reactor.stop();
+                        thread.join();
+                        this->logout_tracker(tracker_ip, TRACKER_PORT);
+                    }
+                }else{
+                    poco_notice(logger(), "Usage : \n"
+                            "(1)Download File : Client TorrentFile\n" 
+                            "(2)Publish File and upload : Client LocalFile TorrentFile");
                 }
-                string tracker_address("127.0.0.1");
-                if( ERROR_OK != this->login_tracker(tracker_address) ){
-                    poco_warning_f1(logger(), "cannot login tracker : %s", tracker_address);
-                }
 
-                int handle = -1;
-                retcode_t ret = this->make_torrent(args[0], args[1],
-                        1 << 20, 0, "127.0.0.1:9977");
-                poco_debug_f1(logger(), "make_torrent retcode : %d", (int)ret);
 
-                Torrent::Torrent torrent;
-                ret = this->parse_torrent( args[1], &torrent );
-                poco_debug_f1(logger(), "parse_torrent retcode : %d", (int)ret);
-                if( ret != ERROR_OK ){
-                    goto err;
-                }
 
-                ret = this->add_job(torrent, "/tmp/", &handle);
-                poco_debug_f1(logger(), "add_job retcode : %d", (int)ret);
-                if( ret != ERROR_OK ){
-                    goto err;
-                }
 
-                ret = this->start_job(handle);
-                poco_debug_f1(logger(), "start_job retcode : %d", (int)ret);
-                if( ret != ERROR_OK ){
-                    goto err;
-                }
 
-                jobThreads_.joinAll();
-
-                this->logout_tracker("127.0.0.1");
-
-#endif
-                //string tracker_address("localhost");
-                //string fileid("1234567890");
-                //if( ERROR_OK == this->login_tracker(tracker_address) ){
-                //    this->publish_resource_to_tracker(tracker_address, fileid);
-                //    this->report_progress(tracker_address, fileid, 25);
-                //    ClientIdCollection c;
-                //    this->request_clients(tracker_address, fileid, 20, 90, c);
-                //}
                 return Application::EXIT_OK;
-err:
-                return Application::EXIT_TEMPFAIL;
             }
 
             //NetTaskManager& CoolClient::download_manager(){
@@ -138,6 +175,7 @@ err:
 
                 Login msg;
                 msg.set_clientid( this->clientid() );
+                msg.set_messageport( LOCAL_PORT );
                 SharedPtr<MessageReply> r;
 
                 ret = handle_reply_message<MessageReply>( sock, msg, PAYLOAD_LOGIN, &r);
@@ -159,7 +197,7 @@ err:
             retcode_t CoolClient::publish_resource_to_tracker(const string& tracker_address, const string& fileid){
                 LocalSockManager::SockPtr sock( sockManager_->get_tracker_sock(tracker_address) );
                 if( sock.isNull() ){
-                    return ERROR_NET_CONNECT;
+                    return ERROR_NET_NOT_CONNECTED;
                 }
                 PublishResource msg;
                 msg.set_clientid(this->clientid());
@@ -341,9 +379,11 @@ err:
             retcode_t CoolClient::shake_hand(const ShakeHand& self, ShakeHand& peer){
                 string peer_clientid( peer.clientid() );
                 poco_assert( sockManager_->is_connected(peer_clientid) );
+                poco_trace_f2(logger(), "pass assert at file : %s, line : %d", string(__FILE__), __LINE__ - 1);
 
                 LocalSockManager::SockPtr sock( sockManager_->get_idle_client_sock(peer_clientid) );
                 poco_assert( sock.isNull() == false );
+                poco_trace_f2(logger(), "pass assert at file : %s, line : %d", string(__FILE__), __LINE__ - 1);
 
                 NetPack req( PAYLOAD_SHAKE_HAND, self );
                 retcode_t ret = req.sendBy( *sock );

@@ -8,6 +8,7 @@
 #include <vector>
 #include <string>
 #include <Poco/Util/Application.h>
+#include <Poco/Util/ServerApplication.h>
 #include <Poco/Path.h>
 #include <Poco/File.h>
 #include <Poco/Types.h>
@@ -18,6 +19,7 @@ using google::protobuf::Message;
 using std::vector;
 using std::string;
 using Poco::Util::Application;
+using Poco::Util::ServerApplication;
 using Poco::Path;
 using Poco::File;
 using Poco::Int32;
@@ -37,11 +39,13 @@ namespace CoolDown{
     namespace Client{
 
             class Job;
-            class CoolClient : public Application{
+            class CoolClient : public ServerApplication{
                 public:
 
-                    CoolClient(int argc, char* argv[]);
-                    const static unsigned int TRACKER_PORT = 9977;
+                    CoolClient();
+                    enum {
+                        TRACKER_PORT = 9977,
+                    };
                     typedef vector<string> ClientIdCollection;
                     typedef vector<File> FileList;
                     typedef LocalSockManager::LocalSockManagerPtr LocalSockManagerPtr;
@@ -97,6 +101,8 @@ namespace CoolDown{
                     const Message& msg, int payload_type, SharedPtr<ReplyMessageType>* out);
 
                     void list_dir_recursive(const File& file, FileList* pList);
+
+                    int LOCAL_PORT;
 
                     bool init_error_;
                     string clientid_;

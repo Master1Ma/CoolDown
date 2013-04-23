@@ -48,7 +48,7 @@ void TrackerConnectionHandler::onReadable(const AutoPtr<ReadableNotification>& p
 
     if( ret ){
         if( ret == ERROR_NET_GRACEFUL_SHUTDOWN ){
-            poco_warning_f1(logger_, "shutdown by remote peer : %s.", sock_.peerAddress().toString() );
+            poco_notice_f1(logger_, "graceful shutdown by remote peer : %s.", sock_.peerAddress().toString() );
         }else{
             poco_warning_f2(logger_, "pack.receiveFrom error! ret : %d, remote addr : %s.", 
                     ret, sock_.peerAddress().toString());
@@ -73,6 +73,7 @@ void TrackerConnectionHandler::onReadable(const AutoPtr<ReadableNotification>& p
     return;
 
 err:
+    app_.RemoveOnlineUser(this->clientid);
     delete this;
     return;
 }
@@ -139,6 +140,7 @@ retcode_t TrackerConnectionHandler::HandleLogin(SharedPtr<Message> in, MessageRe
 
     string ip = loginProto->has_loginip() ? loginProto->loginip() : sock_.peerAddress().host().toString();
     this->clientid = loginProto->clientid();
+    poco_notice_f3(logger_, "client login, id : %s, ip : %s, port : %d", loginProto->clientid(), ip, loginProto->messageport());
     Tracker::ClientPtr client( new ClientInfo(loginProto->clientid(), ip, loginProto->messageport()) );
     ret = app_.AddOnlineUser(client);
 

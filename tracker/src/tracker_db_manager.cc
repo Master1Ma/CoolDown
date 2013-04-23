@@ -42,6 +42,8 @@ retcode_t TrackerDBManager::insert_or_update_login_info(const string& clientid, 
     format(sql, "INSERT INTO %s (CLIENTID, IP, MESSAGEPORT, UPLOADTOTAL, DOWNLOADTOTAL, CREATETIME, LASTLOGINTIME, ISONLINE) "
             "VALUES(?,?,?,?,?,?,?,1) "
             "ON DUPLICATE KEY UPDATE IP=VALUES(IP), MESSAGEPORT=VALUES(MESSAGEPORT), LASTLOGINTIME=VALUES(LASTLOGINTIME), ISONLINE=1", clientInfoTableName_);
+    poco_debug_f4(logger_, "call TrackerDBManager::insert_or_update_login_info, clientid : %s, ip :%s, port : %d, loginTime : %s",
+            clientid, ip, port, loginTime);
     session_ << sql, use(clientid), use(ip), use(port), use(init_upload_total), 
              use(init_download_total), use(loginTime), use(loginTime), now;
     return ERROR_OK;
@@ -185,7 +187,7 @@ retcode_t TrackerDBManager::insert_file_owner_info(const FileOwnerInfo& info){
     using namespace Poco::Data;
     string sql;
     format(sql, "INSERT INTO %s(FILEID, CLIENTID, PERCENTAGE) VALUES(?,?,?)", fileOwnerTableName_);
-    session_ << sql, use(info.percentage()), use(info.fileid()), use(info.clientid()), now;
+    session_ << sql, use(info.fileid()), use(info.clientid()), use(info.percentage()), now;
     return ERROR_OK;
 }
 
@@ -248,10 +250,11 @@ retcode_t TrackerDBManager::init_file_owner_info_table(){
     string fileOwnerTableName("FILEOWNERINFO");
     try{
         session_ << "CREATE TABLE IF NOT EXISTS " << fileOwnerTableName << "("
-                   "id INTEGER PRIMARY KEY AUTO_INCREMENT,"
+                   //"id INTEGER PRIMARY KEY AUTO_INCREMENT,"
                    "FILEID VARCHAR(40),"
                    "CLIENTID VARCHAR(40),"
-                   "PERCENTAGE INTEGER"
+                   "PERCENTAGE INTEGER,"
+                   "PRIMARY KEY(FILEID, CLIENTID)"
                    ");", now;
     }catch(Exception& e){
         poco_error_f1(logger_, "init file owner info table error, msg : %s", e.message());
