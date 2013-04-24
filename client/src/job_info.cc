@@ -2,11 +2,15 @@
 #include "client.h"
 #include <algorithm>
 #include <iterator>
+#include <Poco/Logger.h>
 #include <Poco/Util/Application.h>
 #include <Poco/Bugcheck.h>
+#include <Poco/Exception.h>
 
 using std::back_inserter;
+using Poco::Logger;
 using Poco::Util::Application;
+using Poco::Exception;
 
 
 namespace CoolDown{
@@ -26,11 +30,40 @@ namespace CoolDown{
         :top_path(top_path){
         }
 
-        retcode_t LocalFileInfo::add_file(const string& fileid, const string& relative_path){
+        retcode_t LocalFileInfo::add_file(const string& fileid, const string& relative_path, const string& filename, Int64 filesize){
             FastMutex::ScopedLock lock(mutex_);
-            map<string, FilePtr>::iterator iter = files.find(fileid);
-            poco_assert( iter == files.end() );
-            files[fileid] = FilePtr( new File(top_path.append(relative_path)) );
+            Logger& logger_ = Application::instance().logger();
+            try{
+                //make sure we don't add a file twice
+                map<string, FilePtr>::iterator iter = files.find(fileid);
+                poco_assert( iter == files.end() );
+
+                string filepath = top_path + relative_path + filename;
+                File dir( top_path + relative_path );
+                dir.createDirectories();
+
+                files[fileid] = FilePtr( new File(filepath) );
+                poco_debug_f1(logger_, "filepath : %s", filepath);
+
+                if( files[fileid]->exists() == false ){
+                    bool create_file = files[fileid]->createFile();
+                    if( true == create_file ){
+                        //we just create the file, so set the filesize to the right one
+                        files[fileid]->setSize(filesize);
+                    }else{
+                        //we have that file in our disk, so don't truncate that file.
+                    }
+
+                    poco_debug_f1(logger_, "createDirectory returns %d", (int)create_file);
+                }else{
+                    poco_debug_f3(logger_, "file already exists, fileid '%s', relative_path '%s', filename '%s'",
+                            fileid, relative_path, filename);
+                }
+            }catch(Exception& e){
+                Application::instance().logger().warning( Poco::format("Got exception while LocalFileInfo::add_file, fileid '%s'"
+                            "relative_path '%s' filename '%s'", fileid, relative_path, filename));
+                return ERROR_UNKNOWN;
+            }
             return ERROR_OK;
         }
 
@@ -45,7 +78,7 @@ namespace CoolDown{
         }
         bool LocalFileInfo::has_file(const string& fileid){
             FastMutex::ScopedLock lock(mutex_);
-            return files.end() == files.find(fileid);
+            return files.end() != files.find(fileid);
         }
 
         
@@ -78,6 +111,10 @@ namespace CoolDown{
 
         string TorrentFileInfo::relative_path() const{
             return file_.relativepath();
+        }
+
+        string TorrentFileInfo::filename() const{
+            return file_.filename();
         }
 
         string TorrentFileInfo::chunk_checksum(int chunk_pos) const{
@@ -139,7 +176,9 @@ namespace CoolDown{
         DownloadInfo::DownloadInfo()
         :is_finished(false),
         is_download_paused(true),
-        is_upload_paused(true)
+        is_upload_paused(true),
+        upload_speed_limit(1<<31),
+        download_speed_limit(1<<31)
         {
         }
 

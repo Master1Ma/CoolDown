@@ -14,6 +14,7 @@
 #include <Poco/Condition.h>
 #include <Poco/Mutex.h>
 #include <Poco/File.h>
+#include <Poco/Types.h>
 
 using std::map;
 using std::string;
@@ -28,6 +29,7 @@ using Poco::Logger;
 using Poco::Condition;
 using Poco::FastMutex;
 using Poco::File;
+using Poco::Int64;
 
 namespace CoolDown{
     namespace Client{
@@ -42,7 +44,7 @@ namespace CoolDown{
         class LocalFileInfo{
             public:
                 LocalFileInfo(const string& top_path);
-                retcode_t add_file(const string& fileid, const string& relative_path);
+                retcode_t add_file(const string& fileid, const string& relative_path, const string& filename, Int64 filesize);
                 FilePtr get_file(const string& fileid);
                 bool has_file(const string& fileid);
             private:
@@ -59,6 +61,7 @@ namespace CoolDown{
                 string checksum() const;
                 string fileid() const;
                 string relative_path() const;
+                string filename() const;
 
                 int chunk_count() const;
                 int chunk_size(int chunk_pos) const;

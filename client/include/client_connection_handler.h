@@ -48,7 +48,7 @@ namespace CoolDown{
             private:
                 void Process(const NetPack& in, NetPack* out);
 
-                retcode_t HandleUploadRequest(const SharedPtr<Message>& in, UploadReply* reply, UploadTask* pTask);
+                retcode_t HandleUploadRequest(const SharedPtr<Message>& in, UploadReply* reply, UploadTask* &pTask);
                 retcode_t HandleShakeHand(const SharedPtr<Message>& in, ShakeHand* reply);
 
                 StreamSocket sock_;

@@ -11,6 +11,7 @@
 #include <Poco/TaskManager.h>
 #include <Poco/TaskNotification.h>
 #include <Poco/SharedPtr.h>
+#include <Poco/ThreadPool.h>
 
 using Poco::Logger;
 using Poco::Runnable;
@@ -20,6 +21,7 @@ using Poco::TaskManager;
 using Poco::TaskFinishedNotification;
 using Poco::TaskFailedNotification;
 using Poco::SharedPtr;
+using Poco::ThreadPool;
 
 namespace ClientProto{
     class FileInfo;
@@ -55,11 +57,16 @@ namespace CoolDown{
                 class JobInfo& jobInfo_;
                 LocalSockManager& sockManager_;
                 ChunkSelector cs_;
-                Logger& logger_;
                 
                 FastMutex max_payload_mutex_;
                 Condition max_payload_cond_;
+
+                FastMutex available_thread_mutex_;
+                Condition available_thread_cond_;
+
+                ThreadPool tp_;
                 TaskManager tm_;
+                Logger& logger_;
                 
         };
     }

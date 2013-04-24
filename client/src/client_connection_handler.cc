@@ -55,6 +55,7 @@ namespace CoolDown{
 
 
             this->Process(in, &out);
+            poco_trace(logger_, "After Process in ClientConnectionHandler::onReadable.");
             ret = out.sendBy( sock_ );
 
             if( ret != ERROR_OK ){
@@ -92,6 +93,7 @@ err:
             ShakeHand sh;
             UploadReply ur;
             UploadTask* pTask = NULL;
+            poco_debug_f1(logger_, "in ClientConnectionHandler, Processing request, type : %d", in.payloadtype() );
             switch(in.payloadtype()){
                 case PAYLOAD_SHAKE_HAND:
                     ret = this->HandleShakeHand( req, &sh);
@@ -109,12 +111,14 @@ err:
                     if( ret != ERROR_OK ){
                         poco_warning_f1(logger_, "HandleUploadRequest failed with ret : %d", (int)ret);
                     }else{
+                        poco_trace(logger_, "HandleUploadRequest succeed!");
                         //since the handle func return ERROR_OK, no reason for pTask to be NULL
                         poco_assert( pTask != NULL );
+                        poco_debug_f2(logger_, "assert passed at file : %s, line : %d", string(__FILE__), __LINE__ - 1);
                         this->pTask = pTask;
                     }
-                    this->last_request_upload = true;
                     out->set_message(PAYLOAD_UPLOAD_REPLY, ur);
+                    this->last_request_upload = true;
                     break;
                 default:
                     poco_warning_f2(logger_, "Unknown payload type : %d, remote addr : %s", 
@@ -123,8 +127,9 @@ err:
             }
         }
 
-        retcode_t ClientConnectionHandler::HandleUploadRequest(const SharedPtr<Message>& in, UploadReply* reply, UploadTask* pTask){
+        retcode_t ClientConnectionHandler::HandleUploadRequest(const SharedPtr<Message>& in, UploadReply* reply, UploadTask* &pTask){
             SharedPtr<UploadRequest> req = in.cast<UploadRequest>();
+            reply->set_returncode(ERROR_UNKNOWN);
             if( req.isNull() ){
                 return ERROR_PROTO_TYPE_ERROR;
             }
@@ -137,13 +142,15 @@ err:
                 return ERROR_FILE_NOT_EXISTS;
             }
 
+            poco_trace(logger_, "in HandleUploadRequest, get job succeed!");
             SharedPtr<File> file = pJob->MutableJobInfo()->localFileInfo.get_file(fileid);
             UInt64 offset =  pJob->MutableJobInfo()->torrentInfo.get_file(fileid)->chunk_offset(chunk_pos);
             int chunk_size = pJob->MutableJobInfo()->torrentInfo.get_file(fileid)->chunk_size(chunk_pos);
 
             poco_assert( file.isNull() == false );
             poco_assert( chunk_size > 0 );
-            pTask = new UploadTask(file, offset, chunk_size, this->sock_ );
+            pTask = new UploadTask(file, offset, chunk_size, this->sock_);
+            reply->set_returncode(ERROR_OK);
             return ERROR_OK;
         }
 

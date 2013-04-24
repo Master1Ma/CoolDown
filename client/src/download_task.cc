@@ -84,26 +84,34 @@ namespace CoolDown{
 
             string content;
             int nRecv = 0;
-            while( nRecv <= chunk_size){
+            poco_debug_f1(logger_, "Going to receive %d bytes.", chunk_size);
+            while( nRecv < chunk_size){
                 if( downloadInfo_.is_finished ){
                     throw Exception("Job Finished.");
                 }
 
                 if( downloadInfo_.is_download_paused ){
+                    poco_notice(logger_, "going to wait download_pause_cond in DownloadTask::runTask");
                     downloadInfo_.download_pause_cond.wait(downloadInfo_.download_pause_mutex);
                 }
-                if( downloadInfo_.bytes_download_this_second > downloadInfo_.upload_speed_limit ){
+                if( downloadInfo_.bytes_download_this_second > downloadInfo_.download_speed_limit ){
+                    poco_notice(logger_, "going to wait download_speed_limit_cond in DownloadTask::runTask");
                     downloadInfo_.download_speed_limit_cond.wait(downloadInfo_.download_speed_limit_mutex);
                 }else{
                     Buffer<char> recvBuffer(chunk_size);
+                    poco_trace(logger_, "before receive contents from peer.");
                     int n = sock_->receiveBytes(recvBuffer.begin(), recvBuffer.size() );
+                    poco_debug_f1(logger_, "receive %d bytes from peer.", n);
                     downloadInfo_.bytes_download_this_second += n;
                     nRecv += n;
                     content.append( recvBuffer.begin(), n );
                 }
+                poco_debug_f2(logger_, "expcet %d bytes, %d bytes received!", chunk_size, nRecv);
             }
             poco_assert(content.length() == chunk_size );
+            poco_trace_f2(logger_, "assert passed at file : %s, line : %d", string(__FILE__), __LINE__ - 1);
             poco_assert(nRecv == chunk_size );
+            poco_trace_f2(logger_, "assert passed at file : %s, line : %d", string(__FILE__), __LINE__ - 1);
 
             string content_check_sum( Verification::get_verification_code(content) );
 

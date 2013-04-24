@@ -29,6 +29,8 @@ namespace CoolDown{
         jobInfo_(*jobInfoPtr_), 
         sockManager_(m), 
         cs_(jobInfo_, sockManager_), 
+        tp_(),
+        tm_(tp_),
         logger_(logger){
             tm_.addObserver(
                     Observer<Job, TaskFinishedNotification>
@@ -85,6 +87,7 @@ namespace CoolDown{
             pTask->set_reported();
             sockManager_.return_sock(pTask->clientid(), pTask->sock() );
             max_payload_cond_.signal();
+            this->available_thread_cond_.signal();
         }
 
         void Job::onFailed(TaskFailedNotification* pNf){
@@ -165,7 +168,7 @@ namespace CoolDown{
                 }else{
                     ChunkInfoPtr chunk_info = cs_.get_chunk();
                     if( chunk_info.isNull() ){
-                        poco_debug(logger_, "Download succeed.");
+                        poco_debug(logger_, "All chunk have been processed. leave the while(1) loop");
                         break;
                     }else{
                         poco_debug_f2(logger_, "start downloading file '%s', chunk_pos : %d", chunk_info->fileid, chunk_info->chunk_num);
@@ -210,17 +213,23 @@ namespace CoolDown{
                             poco_warning_f1(logger_, "Unexpected null SockPtr return by sockManager_.get_idle_client_sock, client id :%s"                                            ,clientid);
                             continue;
                         }else{
+                            poco_debug(logger_, "Get peer idle socket succeed.");
                             int chunk_pos = chunk_info->chunk_num;
                             string fileid( chunk_info->fileid );
                             TorrentFileInfoPtr fileInfo = jobInfo_.torrentInfo.get_file(fileid);
 
                             if( false == jobInfo_.localFileInfo.has_file(fileid) ){
-                                retcode_t create_file_ret = jobInfo_.localFileInfo.add_file( fileid, fileInfo->relative_path() );
+                                retcode_t create_file_ret = jobInfo_.localFileInfo.add_file( fileid, 
+                                        fileInfo->relative_path(), fileInfo->filename(), fileInfo->size());
                                 if( create_file_ret != ERROR_OK ){
                                     poco_warning_f2(logger_, "Cannot add file, file id '%s', relative path : '%s'",
                                             fileid, fileInfo->relative_path() );
                                     poco_assert( create_file_ret != ERROR_OK );
+                                }else{
+                                    poco_debug_f1(logger_, "add file '%s' to localFileInfo succeed!", fileid);
                                 }
+                            }else{
+                                poco_debug_f1(logger_, "localFileInfo already contains file '%s'", fileid);
                             }
 
                             FilePtr file = jobInfo_.localFileInfo.get_file(fileid);
@@ -230,6 +239,10 @@ namespace CoolDown{
                                 poco_assert( sock.isNull() == false );
                                 poco_assert( file.isNull() == false );
                                 
+                                poco_debug_f1(logger_, "available thread : %d", tp_.available() );
+                                while( tp_.available() == 0 ){
+                                    this->available_thread_cond_.wait( this->available_thread_mutex_ );
+                                }
                                 tm_.start( new DownloadTask(
                                             *fileInfo, 
                                             jobInfo_.downloadInfo, 

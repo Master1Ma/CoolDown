@@ -134,12 +134,17 @@ namespace CoolDown{
 
                         int handle = -1;
 
-                        ret = this->add_job(torrent, "/tmp/", &handle);
+                        ret = this->add_job(torrent, "/", &handle);
                         poco_debug_f1(logger(), "add_job retcode : %d", (int)ret);
                         JobPtr pJob = this->get_job(handle);
                         poco_assert( pJob.isNull() == false );
                         BOOST_FOREACH(const string& fileid, pJob->JobInfo().fileidlist() ){
                             pJob->MutableJobInfo()->downloadInfo.bitmap_map[fileid]->flip();
+                            pJob->MutableJobInfo()->localFileInfo.add_file(fileid, 
+                                    pJob->MutableJobInfo()->torrentInfo.get_file(fileid)->relative_path(),
+                                    pJob->MutableJobInfo()->torrentInfo.get_file(fileid)->filename(),
+                                    pJob->MutableJobInfo()->torrentInfo.get_file(fileid)->size()
+                                    );
                         }
 
                         poco_debug_f1(logger(), "client listen on port : %d", LOCAL_PORT);
