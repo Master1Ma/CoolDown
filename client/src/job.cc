@@ -79,7 +79,7 @@ namespace CoolDown{
             }else if( pTask->reported() ){
                 //this task has been reported by onFailed, do nothing;
             }else{
-                cs_.report_success_chunk( pTask->chunk_pos() );
+                cs_.report_success_chunk( pTask->chunk_pos(), pTask->fileid() );
             }
             //stuff all task must do
             pTask->set_reported();
@@ -149,6 +149,7 @@ namespace CoolDown{
 
             poco_debug(logger_, "Before init_queue.");
             cs_.init_queue();
+            poco_debug(logger_, "After init_queue.");
             while(1){
                 const static int WAIT_TIMEOUT = 1000;
                 poco_debug(logger_, "enter Job::run() while(1)");
@@ -166,6 +167,8 @@ namespace CoolDown{
                     if( chunk_info.isNull() ){
                         poco_debug(logger_, "Download succeed.");
                         break;
+                    }else{
+                        poco_debug_f2(logger_, "start downloading file '%s', chunk_pos : %d", chunk_info->fileid, chunk_info->chunk_num);
                     }
                     vector<double> payloads;
                     int client_count = chunk_info->clientLists.size();
@@ -179,15 +182,18 @@ namespace CoolDown{
 
                     for(int i = 0; i != chunk_info->clientLists.size(); ++i){
                         FileOwnerInfoPtr ownerInfo = chunk_info->clientLists[i];
-                        payloads.push_back( sockManager_.get_payload_percentage(ownerInfo->clientid) );
+                        double payload_percentage = sockManager_.get_payload_percentage(ownerInfo->clientid);
+                        poco_debug_f2(logger_, "client '%s', payload : %f", ownerInfo->clientid, payload_percentage);
+                        payloads.push_back( payload_percentage );
                     }
 
                     vector<double>::iterator iter = min_element(payloads.begin(), payloads.end());
                     int index = iter - payloads.begin();
-                    poco_debug_f1(logger_, "Choose the index %d file owner.", index);
+                    double payload_percentage = *iter;
+                    poco_debug_f2(logger_, "Choose the index %d file owner, payload : %f", index, payload_percentage);
 
                     //see if the minimal payload is 100%
-                    if( abs(*iter - 1) < 1e-6 ){
+                    if( 1 - payload_percentage < 1e-6 ){
                         poco_debug(logger_, "Even the lowest payload client is 100% payload.");
                         try{
                             max_payload_cond_.wait(max_payload_mutex_, WAIT_TIMEOUT);
@@ -212,19 +218,29 @@ namespace CoolDown{
                                 jobInfo_.localFileInfo.add_file( fileid, fileInfo->relative_path() );
                             }
                             FilePtr file = jobInfo_.localFileInfo.get_file(fileid);
-                            tm_.start( new DownloadTask(
-                                        *fileInfo, 
-                                        jobInfo_.downloadInfo, 
-                                        jobInfo_.clientid(), 
-                                        sock, 
-                                        chunk_pos, 
-                                        *file
-                                        ) 
-                                    );
+                            poco_trace(logger_, "Before start new download task.");
+                            try{
+                                poco_assert( fileInfo.isNull() == false );
+                                poco_assert( sock.isNull() == false );
+                                poco_assert( file.isNull() == false );
+                                
+                                tm_.start( new DownloadTask(
+                                            *fileInfo, 
+                                            jobInfo_.downloadInfo, 
+                                            jobInfo_.clientid(), 
+                                            sock, 
+                                            chunk_pos, 
+                                            *file
+                                            ) 
+                                        );
+                            }catch(Poco::Exception& e){
+                                poco_warning_f1(logger_, "Got exception while start DownloadTask, %s", e.displayText() );
+                            }
                         }
                     }
                 }
             }
+            tm_.joinAll();
             poco_debug(logger_, "Job finished!");
         }
 
@@ -232,7 +248,7 @@ namespace CoolDown{
             string tracker_address(jobInfo_.torrentInfo.tracker_address());
             poco_debug_f1(logger_, "going to request clients from %s", tracker_address);
             poco_assert( jobInfo_.downloadInfo.percentage_map.find(fileid) != jobInfo_.downloadInfo.percentage_map.end() );
-            poco_debug_f2(logger_, "assert passed at file : %s, line : %d", string(__FILE__), __LINE__);
+            poco_debug_f2(logger_, "assert passed at file : %s, line : %d", string(__FILE__), __LINE__ - 1);
             int percentage = jobInfo_.downloadInfo.percentage_map[fileid];
             int needCount = 20;
             CoolClient::ClientIdCollection clientidList;
@@ -271,9 +287,9 @@ namespace CoolDown{
             pInfo->set_fileid(fileid);
             pInfo->set_hasfile(1);
             poco_assert( jobInfo_.downloadInfo.percentage_map.find(fileid) != jobInfo_.downloadInfo.percentage_map.end() );
-            poco_debug_f2(logger_, "assert passed at file : %s, line : %d", string(__FILE__), __LINE__);
+            poco_debug_f2(logger_, "assert passed at file : %s, line : %d", string(__FILE__), __LINE__ - 1);
             pInfo->set_percentage(jobInfo_.downloadInfo.percentage_map[fileid]);
-            Job::convert_bitmap_to_transport_format(jobInfo_.downloadInfo.bitmap, pInfo);
+            Job::convert_bitmap_to_transport_format(jobInfo_.downloadInfo.bitmap_map[fileid], pInfo);
 
             ShakeHand peer;
             //only fill the clientid as we only know
@@ -285,12 +301,16 @@ namespace CoolDown{
                 return ret;
             }
             poco_debug_f2(logger_, "shake hand with peer succeed! fileid : %s, clientid : %s", fileid, clientid);
+            if( peer.info().hasfile() == 0 ){
+                poco_information_f2(logger_, "remote peer '%s' has no file '%s'.", clientid, fileid);
+                return ERROR_PEER_FILE_NOT_FOUND;
+            }
 
             //find the ownerinfolist of this file
             JobInfo::owner_info_map_t& infoMap = jobInfo_.ownerInfoMap;
             JobInfo::owner_info_map_t::iterator iter = infoMap.find(fileid);
             poco_assert( iter != infoMap.end() );
-            poco_debug_f2(logger_, "assert passed at file : %s, line : %d", string(__FILE__), __LINE__);
+            poco_trace_f2(logger_, "assert passed at file : %s, line : %d", string(__FILE__), __LINE__ - 1);
 
             //since all clients are in the list, we just update the bitmap of peer client
             FileOwnerInfoPtrList& infoPtrList = iter->second;
@@ -298,9 +318,11 @@ namespace CoolDown{
                                                            FileOwnerInfoPtrSelector(clientid) );
             FileOwnerInfoPtr info;
             poco_assert( infoPtrList.end() != infoIter );
-            poco_debug_f2(logger_, "assert passed at file : %s, line : %d", string(__FILE__), __LINE__);
+            poco_trace_f2(logger_, "assert passed at file : %s, line : %d", string(__FILE__), __LINE__ - 1);
             info = *infoIter;
             Job::conver_transport_format_bitmap(peer.info(), info->bitmap_ptr);
+            poco_assert( peer.info().filebitcount() == info->bitmap_ptr->size() );
+            poco_trace_f2(logger_, "assert passed at file : %s, line : %d", string(__FILE__), __LINE__ - 1);
 
             return ERROR_OK;
         }

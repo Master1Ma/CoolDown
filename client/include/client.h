@@ -76,9 +76,8 @@ namespace CoolDown{
                     retcode_t start_job(int handle);
                     retcode_t pause_download(int handle);
                     retcode_t resume_download(int handle);
+                    JobPtr get_job(int handle);
                     JobPtr get_job(const string& fileid);
-
-                    
 
 
 

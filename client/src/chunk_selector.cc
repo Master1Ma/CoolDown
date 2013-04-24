@@ -37,7 +37,7 @@ namespace CoolDown{
             while( iter != fileMap.end() ){
 
                 for(int chunk_pos = 0; chunk_pos != iter->second->chunk_count(); ++chunk_pos){
-                    if( jobInfo_.downloadInfo.bitmap->test(chunk_pos) ){
+                    if( jobInfo_.downloadInfo.bitmap_map[iter->first]->test(chunk_pos) ){
                         //this part has been downloaded
                         continue;
                     }else{
@@ -90,9 +90,9 @@ namespace CoolDown{
             return p;
         }
         
-        void ChunkSelector::report_success_chunk(int chunk_num){
+        void ChunkSelector::report_success_chunk(int chunk_num, const string& fileid){
             //mark this chunk succeed.
-            (*(jobInfo_.downloadInfo.bitmap))[chunk_num] = 1;
+            (*(jobInfo_.downloadInfo.bitmap_map[fileid]))[chunk_num] = 1;
         }
 
         void ChunkSelector::report_failed_chunk(int chunk_num, const string& fileid){

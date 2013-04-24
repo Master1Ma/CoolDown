@@ -45,6 +45,8 @@ enum retcode_t{
 
     ERROR_FILE_NOT_FOUND = 70001,
     ERROR_FILE_NO_OWNER_ONLINE = 70002,
+
+    ERROR_PEER_FILE_NOT_FOUND = 80001,
 };
 
 const char* errmsg(retcode_t ret);

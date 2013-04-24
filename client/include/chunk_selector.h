@@ -49,7 +49,7 @@ namespace CoolDown{
                 vector<string> fileidlist();
                 void init_queue();
                 ChunkInfoPtr get_chunk();
-                void report_success_chunk(int chunk_num);
+                void report_success_chunk(int chunk_num, const string& fileid);
                 void report_failed_chunk(int chunk_num, const string& fileid);
 
             private:

@@ -109,6 +109,7 @@ namespace CoolDown{
 
             if( sockList.end() == sockIter){
                 if( sockList.size() > MAX_CONNECTION_PER_CLIENT ){
+                    poco_notice_f1(logger_, "connection to %s exceed limit!", clientid);
                     return SockPtr();
                 }else if( sockList.size() == 0 ){
                     poco_notice(logger_, "the sock list of %s has no sock at all!");

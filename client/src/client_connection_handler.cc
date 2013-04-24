@@ -98,7 +98,7 @@ err:
                     if( ret != ERROR_OK ){
                         poco_warning_f1(logger_, "HandleShakeHand failed with ret : %d", (int)ret);
                     }else{
-                        poco_debug(logger_, "HandlehakeHand succeed!" );
+                        poco_debug(logger_, "HandleShakeHand succeed!" );
                     }
 
                     out->set_message(PAYLOAD_SHAKE_HAND, sh);
@@ -148,6 +148,33 @@ err:
         }
 
         retcode_t ClientConnectionHandler::HandleShakeHand(const SharedPtr<Message>& in, ShakeHand* reply){
+            SharedPtr<ShakeHand> req = in.cast<ShakeHand>();
+            if( req.isNull() ){
+                return ERROR_PROTO_TYPE_ERROR;
+            }
+            string fileid( req->info().fileid() );
+
+            reply->set_clientid( app_.clientid() );
+            reply->mutable_info()->set_fileid(fileid);
+
+            CoolClient::JobPtr pJob = app_.get_job(fileid);
+            FileInfo* pInfo = reply->mutable_info();
+            if( pJob.isNull() ){
+                poco_debug_f1(logger_, "peer request for file '%s' but we don't have that job running.", fileid);
+                pInfo->set_hasfile(0);
+                pInfo->set_percentage(0);
+                pInfo->set_filebitcount(0);
+            }else if( pJob->MutableJobInfo()->localFileInfo.has_file(fileid) == false ){
+                poco_debug_f1(logger_, "peer request for file '%s' but we don't download that file", fileid);
+                pInfo->set_hasfile(0);
+                pInfo->set_percentage(0);
+                pInfo->set_filebitcount(0);
+
+            }else{
+                pInfo->set_hasfile(1);
+                pInfo->set_percentage( pJob->MutableJobInfo()->downloadInfo.percentage_map[fileid] );
+                Job::convert_bitmap_to_transport_format(pJob->MutableJobInfo()->downloadInfo.bitmap_map[fileid], pInfo);
+            }
             return ERROR_OK;
         }
 

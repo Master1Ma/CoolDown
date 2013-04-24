@@ -146,7 +146,7 @@ namespace CoolDown{
 
             map<string, int> percentage_map;
             int max_parallel_task;
-            file_bitmap_ptr bitmap;
+            map<string, file_bitmap_ptr> bitmap_map;
         };
 
 

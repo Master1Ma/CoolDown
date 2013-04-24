@@ -81,6 +81,7 @@ namespace CoolDown{
 
                 string tracker_ip("127.0.0.1");
                 string tracker_address( format("%s:%d", tracker_ip, (int)CoolClient::TRACKER_PORT) );
+                poco_debug_f1(logger(), "run application with %d", (int)args.size());
 
                 if( args.size() == 1 ){
 
@@ -103,11 +104,13 @@ namespace CoolDown{
                         if( ret != ERROR_OK ){
                         }else{
                             jobThreads_.joinAll();
+                            poco_trace(logger(), "all jobThreads_ return.");
                         }
                     }
                     this->logout_tracker(tracker_ip, TRACKER_PORT);
 
                 }else if( args.size() == 2 ){
+                    LOCAL_PORT = 9024;
                     if( ERROR_OK != this->login_tracker(tracker_ip, CoolClient::TRACKER_PORT) ){
                         poco_warning_f1(logger(), "cannot login tracker : %s", tracker_address);
                     }
@@ -116,12 +119,13 @@ namespace CoolDown{
                             1 << 20, 0, tracker_address);
                     poco_debug_f1(logger(), "make_torrent retcode : %d", (int)ret);
 
-                    Torrent::Torrent torrent;
-                    ret = this->parse_torrent( args[1], &torrent );
-                    poco_debug_f1(logger(), "parse_torrent retcode : %d", (int)ret);
                     if( ret != ERROR_OK){
                         return Application::EXIT_TEMPFAIL;
                     }else{
+                        Torrent::Torrent torrent;
+                        retcode_t ret = this->parse_torrent( args[1], &torrent );
+                        poco_debug_f1(logger(), "parse_torrent retcode : %d", (int)ret);
+
                         for(int i = 0; i != torrent.file().size(); ++i){
                             string fileid( torrent.file().Get(i).checksum() );
                             retcode_t publish_ret = this->publish_resource_to_tracker(tracker_address, fileid );
@@ -129,12 +133,14 @@ namespace CoolDown{
                         }
 
                         int handle = -1;
-                        Torrent::Torrent torrent;
-                        retcode_t ret = this->parse_torrent( args[0], &torrent );
-                        poco_debug_f1(logger(), "parse_torrent retcode : %d", (int)ret);
 
                         ret = this->add_job(torrent, "/tmp/", &handle);
                         poco_debug_f1(logger(), "add_job retcode : %d", (int)ret);
+                        JobPtr pJob = this->get_job(handle);
+                        poco_assert( pJob.isNull() == false );
+                        BOOST_FOREACH(const string& fileid, pJob->JobInfo().fileidlist() ){
+                            pJob->MutableJobInfo()->downloadInfo.bitmap_map[fileid]->flip();
+                        }
 
                         poco_debug_f1(logger(), "client listen on port : %d", LOCAL_PORT);
                         ServerSocket svs(LOCAL_PORT);
@@ -398,17 +404,20 @@ namespace CoolDown{
                 NetPack req( PAYLOAD_SHAKE_HAND, self );
                 retcode_t ret = req.sendBy( *sock );
                 if( ret != ERROR_OK ){
+                    sockManager_->return_sock(peer_clientid, sock);
                     poco_warning(logger(), "send shake_hand error.");
                     return ret;
                 }
                 NetPack res;
                 ret = res.receiveFrom( *sock );
                 if( ret != ERROR_OK ){
+                    sockManager_->return_sock(peer_clientid, sock);
                     poco_warning(logger(), "receive shake_hand error.");
                     return ret;
                 }
 
                 peer = *(res.message().cast<ShakeHand>());
+                sockManager_->return_sock(peer_clientid, sock);
                 return ERROR_OK;
             }
 
@@ -449,6 +458,14 @@ namespace CoolDown{
                 return ERROR_OK;
             }
 
+            CoolClient::JobPtr CoolClient::get_job(int handle){
+                if( jobs_.find(handle) == jobs_.end() ){
+                    return JobPtr();
+                }else{
+                    return jobs_[handle];
+                }
+            }
+
             CoolClient::JobPtr CoolClient::get_job(const string& fileid){
                 BOOST_FOREACH(JobMap::value_type& p, jobs_){
                     const vector<string>& fileidlist = p.second->JobInfo().fileidlist();
@@ -464,6 +481,7 @@ namespace CoolDown{
                 poco_assert(pTorrent != NULL);
                 pTorrent->Clear();
                 if( pTorrent->ParseFromIstream(&ifs) == false){
+                    poco_warning_f1(logger(), "cannot parse torrent from file '%s'.", torrent_file_path.toString());
                     return ERROR_FILE_PARSE_ERROR;
                 }
                 return ERROR_OK;

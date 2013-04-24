@@ -4,16 +4,20 @@
 #include "netpack.h"
 #include "payload_type.h"
 #include "verification.h"
+#include <Poco/Logger.h>
 #include <Poco/Format.h>
 #include <Poco/Exception.h>
 #include <Poco/Buffer.h>
 #include <Poco/SharedMemory.h>
+#include <Poco/Util/Application.h>
 #include <Poco/Bugcheck.h>
 
+using Poco::Logger;
 using Poco::format;
 using Poco::Exception;
 using Poco::Buffer;
 using Poco::SharedMemory;
+using Poco::Util::Application;
 using namespace ClientProto;
 
 namespace CoolDown{
@@ -30,7 +34,6 @@ namespace CoolDown{
          check_sum_(fileInfo_.chunk_checksum(chunk_pos_)), 
          file_(file), 
          reported_(false){
-
         }
 
         string DownloadTask::fileid() const{
@@ -38,33 +41,46 @@ namespace CoolDown{
         }
 
         void DownloadTask::runTask(){
+            Logger& logger_ = Application::instance().logger();
+            poco_trace(logger_, "Enter DownloadTask::runTask");
             UploadRequest req;
             req.set_clientid(clientid_);
             req.set_fileid(fileInfo_.fileid());
             req.set_chunknumber(chunk_pos_);
 
+
             NetPack pack( PAYLOAD_UPLOAD_REQUEST, req );
             retcode_t ret = pack.sendBy(*sock_);
             if( ERROR_OK != ret ){
-                throw Exception( format("Error send upload request. ret : %d", (int)ret) );
+                string msg( format("Error send upload request. ret : %d", (int)ret) );
+                poco_notice(logger_, msg);
+                throw Exception( msg );
             }
             ret = pack.receiveFrom(*sock_);
             if( ERROR_OK != ret ){
-                throw Exception( format("Error recv upload reply. ret : %d", (int)ret) );
+                string msg( format("Error recv upload reply. ret : %d", (int)ret) );
+                poco_notice(logger_, msg);
+                throw Exception( msg );
             }
             SharedPtr<UploadReply> reply = pack.message().cast<UploadReply>();
             if( reply.isNull() ){
-                throw Exception( "Cannot cast recv message to UploadReply type." );
+                string msg( "Cannot cast recv message to UploadReply type." );
+                poco_notice(logger_, msg);
+                throw Exception( msg );
             }
 
             if( reply->returncode() != ERROR_OK ){
-                throw Exception( format("remote client cannot handle upload request, returncode : %d", (int)reply->returncode()) );
+                string msg( format("remote client cannot handle upload request, returncode : %d", (int)reply->returncode()) );
+                poco_notice(logger_, msg);
+                throw Exception( msg );
             }
 
             //chunk_pos ranges from 0~chunk_count-1
             //bool isLastChunk = chunk_pos_ == ( fileInfo_.get_chunk_count() - 1 );
+            poco_debug(logger_, "Upload Message exchange succeed, now goto the real download.");
             int chunk_size = fileInfo_.chunk_size(chunk_pos_);
             poco_assert( chunk_size != -1 );
+            poco_debug_f2(logger_, "assert passed at file : %s, line : %d", string(__FILE__), __LINE__ - 1);
 
             string content;
             int nRecv = 0;

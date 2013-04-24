@@ -15,6 +15,10 @@ namespace CoolDown{
             string retrieve_fileid(const Torrent::File& file){
                 return file.checksum();
             }
+
+            int retrieve_chunk_size(const Torrent::File& file){
+                return file.chunk().size();
+            }
         }
 
         //LocalFileInfo
@@ -135,8 +139,7 @@ namespace CoolDown{
         DownloadInfo::DownloadInfo()
         :is_finished(false),
         is_download_paused(true),
-        is_upload_paused(true),
-        bitmap(new file_bitmap_t)
+        is_upload_paused(true)
         {
         }
 
@@ -147,9 +150,14 @@ namespace CoolDown{
          localFileInfo(top_path),
          torrentInfo(torrent)
         {
+            vector<int> chunk_size_list;
+            transform(torrent.file().begin(), torrent.file().end(), back_inserter(chunk_size_list), retrieve_chunk_size);
             transform(torrent.file().begin(), torrent.file().end(), back_inserter(fileidlist_), retrieve_fileid);
             for(int i = 0; i != fileidlist_.size(); ++i){
-                downloadInfo.percentage_map[fileidlist_[i]] = 0;
+                string fileid( fileidlist_[i] );
+                poco_debug_f1(logger_, "add '%s' to Job", fileid);
+                downloadInfo.percentage_map[fileid] = 0;
+                downloadInfo.bitmap_map[fileid] = new file_bitmap_t( chunk_size_list[i], 0 );
             }
         }
 
