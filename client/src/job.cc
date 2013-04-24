@@ -215,8 +215,14 @@ namespace CoolDown{
                             TorrentFileInfoPtr fileInfo = jobInfo_.torrentInfo.get_file(fileid);
 
                             if( false == jobInfo_.localFileInfo.has_file(fileid) ){
-                                jobInfo_.localFileInfo.add_file( fileid, fileInfo->relative_path() );
+                                retcode_t create_file_ret = jobInfo_.localFileInfo.add_file( fileid, fileInfo->relative_path() );
+                                if( create_file_ret != ERROR_OK ){
+                                    poco_warning_f2(logger_, "Cannot add file, file id '%s', relative path : '%s'",
+                                            fileid, fileInfo->relative_path() );
+                                    poco_assert( create_file_ret != ERROR_OK );
+                                }
                             }
+
                             FilePtr file = jobInfo_.localFileInfo.get_file(fileid);
                             poco_trace(logger_, "Before start new download task.");
                             try{

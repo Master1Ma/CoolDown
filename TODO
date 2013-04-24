@@ -1,3 +1,0 @@
-Add UploadTask.
-Add mutex of JobInfo read-write members.
-Add threadpool to run Job.
