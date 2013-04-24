@@ -102,6 +102,9 @@ namespace CoolDown{
                     poco_trace(logger_, "before receive contents from peer.");
                     int n = sock_->receiveBytes(recvBuffer.begin(), recvBuffer.size() );
                     poco_debug_f1(logger_, "receive %d bytes from peer.", n);
+                    if( n <= 0 ){
+                        throw Exception("receiveBytes in DownloadTask::runTask return n <= 0");
+                    }
                     downloadInfo_.bytes_download_this_second += n;
                     nRecv += n;
                     content.append( recvBuffer.begin(), n );

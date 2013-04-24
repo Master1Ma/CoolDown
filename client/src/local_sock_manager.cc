@@ -59,6 +59,11 @@ namespace CoolDown{
                     clientid, ip, port);
             client_sock_map_[clientid].push_back(std::make_pair(sock, IDLE) );
 
+            FastMutex::ScopedLock cond_lock(condition_map_mutex_);
+            if( condition_map_.find( clientid ) == condition_map_.end() ){
+                condition_map_[clientid] = new Condition;
+            }
+
             return ERROR_OK;
         }
         /*
@@ -80,6 +85,7 @@ namespace CoolDown{
         SockPtr LocalSockManager::make_connection(const string& ip, int port){
             return this->make_connection(SocketAddress(ip, port));
         }
+
         SockPtr LocalSockManager::make_connection(const SocketAddress& sa){
             SockPtr sock;
             try{
@@ -119,6 +125,7 @@ namespace CoolDown{
                     poco_notice_f1(logger_, "int get_idle_client_sock, Try make_connection to %s.", prototype->peerAddress().host().toString());
                     poco_notice(logger_, "make_connection may block...");
                     SockPtr sock = make_connection(prototype->peerAddress());
+                    client_sock_map_[clientid].push_back( std::make_pair(sock, USED) );
                     return sock;
                 }
             
@@ -136,6 +143,7 @@ namespace CoolDown{
                 return;
             }
             SockList& sockList = listIter->second;
+            poco_debug_f2(logger_, "sockList of client '%s' length : %d", clientid, (int)sockList.size() );
             SockList::iterator iter = find_if(sockList.begin(), sockList.end(), FindSock(sock) );
             if( iter == sockList.end() ){
                 poco_notice_f2(logger_, "return sock that doesnot belong to client, clientid:%s, peer addr:%s",
@@ -143,6 +151,17 @@ namespace CoolDown{
                 return;
             }
             iter->second = IDLE;
+            FastMutex::ScopedLock cond_lock(condition_map_mutex_);
+            poco_assert( condition_map_.find(clientid) != condition_map_.end() );
+            poco_debug_f2(logger_, "assert passed at file : %s, line : %d", string(__FILE__), __LINE__ - 1);
+            condition_map_[clientid]->signal();
+        }
+
+        LocalSockManager::ConditionPtr LocalSockManager::get_sock_idel_condition(const string& clientid){
+            FastMutex::ScopedLock cond_lock(condition_map_mutex_);
+            poco_assert( condition_map_.find(clientid) != condition_map_.end() );
+            poco_debug_f2(logger_, "assert passed at file : %s, line : %d", string(__FILE__), __LINE__ - 1);
+            return condition_map_[clientid];
         }
 
         double LocalSockManager::get_payload_percentage(const string& clientid){

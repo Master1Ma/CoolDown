@@ -399,6 +399,7 @@ namespace CoolDown{
             //communicate with client
             retcode_t CoolClient::shake_hand(const ShakeHand& self, ShakeHand& peer){
                 string peer_clientid( peer.clientid() );
+                poco_trace_f1(logger(), "assert if connect to '%s'", peer_clientid);
                 poco_assert( sockManager_->is_connected(peer_clientid) );
                 poco_trace_f2(logger(), "pass assert at file : %s, line : %d", string(__FILE__), __LINE__ - 1);
 

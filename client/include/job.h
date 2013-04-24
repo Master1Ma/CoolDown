@@ -64,6 +64,8 @@ namespace CoolDown{
                 FastMutex available_thread_mutex_;
                 Condition available_thread_cond_;
 
+                FastMutex idle_sock_mutex_;
+
                 ThreadPool tp_;
                 TaskManager tm_;
                 Logger& logger_;

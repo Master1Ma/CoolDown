@@ -85,6 +85,7 @@ namespace CoolDown{
             }
             //stuff all task must do
             pTask->set_reported();
+            poco_debug_f1(logger_, "return sock of client '%s'", pTask->clientid());
             sockManager_.return_sock(pTask->clientid(), pTask->sock() );
             max_payload_cond_.signal();
             this->available_thread_cond_.signal();
@@ -206,12 +207,17 @@ namespace CoolDown{
                         }
                         continue;
                     }else{
-                        string clientid( chunk_info->clientLists[index]->clientid );
-                        LocalSockManager::SockPtr sock = sockManager_.get_idle_client_sock(clientid);
+                        string peer_clientid( chunk_info->clientLists[index]->clientid );
+                        LocalSockManager::SockPtr sock = sockManager_.get_idle_client_sock(peer_clientid);
+                        while( sock.isNull() ){
+                            LocalSockManager::ConditionPtr cond = sockManager_.get_sock_idel_condition(peer_clientid);
+                            cond->wait( this->idle_sock_mutex_);
+                            sock = sockManager_.get_idle_client_sock(peer_clientid);
+                        }
                         //see if some error happend in get_idle_client_sock
                         if( sock.isNull() ){
-                            poco_warning_f1(logger_, "Unexpected null SockPtr return by sockManager_.get_idle_client_sock, client id :%s"                                            ,clientid);
-                            continue;
+                            poco_warning_f1(logger_, "Unexpected null SockPtr return by sockManager_.get_idle_client_sock, client id :%s"                                            ,peer_clientid);
+                            poco_assert( sock.isNull() == false );
                         }else{
                             poco_debug(logger_, "Get peer idle socket succeed.");
                             int chunk_pos = chunk_info->chunk_num;
@@ -246,7 +252,7 @@ namespace CoolDown{
                                 tm_.start( new DownloadTask(
                                             *fileInfo, 
                                             jobInfo_.downloadInfo, 
-                                            jobInfo_.clientid(), 
+                                            peer_clientid,
                                             sock, 
                                             chunk_pos, 
                                             *file

@@ -9,16 +9,18 @@
 #include <Poco/SharedPtr.h>
 #include <Poco/Logger.h>
 #include <Poco/Mutex.h>
+#include <Poco/Condition.h>
 
 using std::pair;
 using std::map;
 using std::list;
 using std::string;
 using Poco::Net::StreamSocket;
+using Poco::Net::SocketAddress;
 using Poco::SharedPtr;
 using Poco::Logger;
 using Poco::FastMutex;
-using Poco::Net::SocketAddress;
+using Poco::Condition;
 
 
 namespace Poco{
@@ -54,6 +56,7 @@ namespace CoolDown{
             //typedef SharedPtr<StreamSocket, Poco::ReferenceCounter, SockReleasePolicy> SockPtr;
             typedef SharedPtr<StreamSocket> SockPtr;
             typedef SharedPtr<LocalSockManager> LocalSockManagerPtr;
+            typedef SharedPtr<Condition> ConditionPtr;
             typedef list<pair<SockPtr, SockStatus> > SockList;
             typedef map<string, SockList> client_sock_map_t;
             typedef map<string, SockPtr> server_sock_map_t;
@@ -74,6 +77,7 @@ namespace CoolDown{
             SockPtr get_tracker_sock(const string& tracker_address);
             SockPtr get_idle_client_sock(const string& clientid);
             void return_sock(const string& clientid, SockPtr sock);
+            ConditionPtr get_sock_idel_condition(const string& clientid);
             
 
             double get_payload_percentage(const string& clientid);
@@ -107,7 +111,9 @@ namespace CoolDown{
             Logger& logger_;
             FastMutex server_sock_map_mutex_;
             FastMutex client_sock_map_mutex_;
+            FastMutex condition_map_mutex_;
 
+            map<string, ConditionPtr> condition_map_;
         };
 
     }
