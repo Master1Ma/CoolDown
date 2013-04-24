@@ -154,8 +154,8 @@ retcode_t Tracker::ReportProgress(const string& clientid, const string& fileid, 
     return dbManager_->update_file_owner_info(info);
 }
 
-retcode_t Tracker::PublishResource(const string& clientid, const string& fileid){
-    FileOwnerInfo info(clientid, fileid, 100);
+retcode_t PublishResource(const string& clientId, const string& torrentid, const StringList& fileids){
+    FileOwnerInfo info(clientid, torrentid, fileid, 100);
     return dbManager_->insert_file_owner_info(info);
 }
 

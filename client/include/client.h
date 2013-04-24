@@ -46,7 +46,8 @@ namespace CoolDown{
                     enum {
                         TRACKER_PORT = 9977,
                     };
-                    typedef vector<string> ClientIdCollection;
+                    typedef vector<string> StringList;
+                    typedef StringList ClientIdCollection;
                     typedef vector<File> FileList;
                     typedef LocalSockManager::LocalSockManagerPtr LocalSockManagerPtr;
                     typedef int make_torrent_progress_callback_t;
@@ -63,7 +64,8 @@ namespace CoolDown{
                     //communicate with tracker
                     retcode_t login_tracker(const string& tracker_address, int port = TRACKER_PORT);
                     retcode_t logout_tracker(const string& tracker_address, int port = TRACKER_PORT);
-                    retcode_t publish_resource_to_tracker(const string& tracker_address, const string& fileid);
+                    retcode_t publish_resource_to_tracker(const string& tracker_address, 
+                            const string& torrentid, const StringList& fileids);
                     retcode_t report_progress(const string& tracker_address, const string& fileid, int percentage);
                     retcode_t request_clients(const string& tracker_address, const string& fileid, int currentPercentage, 
                                           int needCount, const ClientIdCollection& clientids, FileOwnerInfoPtrList* pInfoList);

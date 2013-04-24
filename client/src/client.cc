@@ -122,11 +122,14 @@ namespace CoolDown{
                     if( ret != ERROR_OK){
                         return Application::EXIT_TEMPFAIL;
                     }else{
+                        StringList fileids;
+                        fileids.reserve( torrent.file().size() );
                         for(int i = 0; i != torrent.file().size(); ++i){
                             string fileid( torrent.file().Get(i).checksum() );
-                            retcode_t publish_ret = this->publish_resource_to_tracker(tracker_address, fileid );
-                            poco_debug_f2(logger(), "publish resource '%s' return code %d.", fileid, (int)publish_ret);
+                            fileids.push_back(fileid);
                         }
+                        retcode_t publish_ret = this->publish_resource_to_tracker(tracker_address, torrent.torrentid(), fileids);
+                        poco_debug_f2(logger(), "publish torrent id : '%s' return code %d.", torrent.torrentid(), (int)publish_ret);
 
                         int handle = -1;
                         Torrent::Torrent torrent;
@@ -204,14 +207,16 @@ namespace CoolDown{
                 return ret;
             }
 
-            retcode_t CoolClient::publish_resource_to_tracker(const string& tracker_address, const string& fileid){
+            retcode_t CoolClient::publish_resource_to_tracker(const string& tracker_address, 
+                    const string& torrentid, const StringList& fileids){
                 LocalSockManager::SockPtr sock( sockManager_->get_tracker_sock(tracker_address) );
                 if( sock.isNull() ){
                     return ERROR_NET_NOT_CONNECTED;
                 }
                 PublishResource msg;
                 msg.set_clientid(this->clientid());
-                msg.set_fileid(fileid);
+                msg.set_torrentid(torrentid);
+                copy(fileids.begin(), fileids.end(), google::protobuf::RepeatedFieldBackInserter(msg.mutable_fileid()));
                 SharedPtr<MessageReply> r;
                 retcode_t ret = handle_reply_message<MessageReply>( sock, msg, PAYLOAD_PUBLISH_RESOURCE, &r);
                 return ret;
@@ -341,6 +346,9 @@ namespace CoolDown{
                 FileList::iterator iter = files.begin();
                 FileList::iterator end = files.end();
 
+                //append all fileid to this and then do SHA1
+                string torrent_id_src;
+
                 while( iter != end ){
                     //Process one File
                     Path p(iter->path());
@@ -357,6 +365,8 @@ namespace CoolDown{
                     aFile->set_filename( p.getFileName() );
                     aFile->set_size( file_size );
                     aFile->set_checksum( file_check_sum );
+                    //generate the unique torrent id
+                    torrent_id_src.append( file_check_sum );
                     Verification::ChecksumList::iterator checksum_iter = checksums.begin();
 
                     //Process chunks in a File
@@ -374,6 +384,7 @@ namespace CoolDown{
                 }
 
                 torrent.set_totalsize( total_size );
+                torrent.set_torrentid( Verification::get_verification_code(torrent_id_src) );
 
                 ofstream ofs( torrent_file_path.toString().c_str() );
                 if( !ofs ){

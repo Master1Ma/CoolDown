@@ -44,7 +44,8 @@ message ReportProgress{
 
 message PublishResource{
     required string ClientId = 1;
-    required string FileId = 2;
+    required string TorrentId = 2;
+    repeated string FileId = 3;
 }
 
 message MessageReply{

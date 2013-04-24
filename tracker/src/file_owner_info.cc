@@ -5,8 +5,8 @@ FileOwnerInfo::FileOwnerInfo()
 {
 }
 
-FileOwnerInfo::FileOwnerInfo(const string& clientid, const string& fileid, int percentage)
-    :clientid_(clientid), fileid_(fileid), percentage_(percentage)
+FileOwnerInfo::FileOwnerInfo(const string& clientid, const string& torrentid, const string& fileid, int percentage)
+    :clientid_(clientid), torrentid_(torrentid_), fileid_(fileid), percentage_(percentage)
 {
 }
 

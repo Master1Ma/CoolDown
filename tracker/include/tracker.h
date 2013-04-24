@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <map>
+#include <string>
 #include "Poco/Logger.h"
 #include "Poco/Net/SocketReactor.h"
 #include "Poco/Net/SocketAcceptor.h"
@@ -27,7 +28,7 @@
 
 using std::pair;
 using std::vector;
-using std::multimap;
+using std::string;
 using Poco::Logger;
 using Poco::Net::SocketReactor;
 using Poco::Net::SocketAcceptor;
@@ -66,6 +67,7 @@ public:
     typedef TrackerDBManager::FileOwnerInfoPtr FileOwnerInfoPtr;
     typedef TrackerDBManager::FileOwnerInfoCollection ClientFileInfoCollection;
     typedef TrackerDBManager::ClientIdCollection ClientIdCollection;
+    typedef vector<string> StringList;
 	Tracker();
 	~Tracker();
 
@@ -75,7 +77,7 @@ public:
             const ClientIdCollection& ownedClientIdList, ClientFileInfoCollection* clients);
 
     retcode_t ReportProgress(const string& clientId, const string& fileId, int percentage);
-    retcode_t PublishResource(const string& clientId, const string& fileId);
+    retcode_t PublishResource(const string& clientId, const string& torrentid, const StringList& fileids);
 
 protected:
 	void initialize(Application& self);

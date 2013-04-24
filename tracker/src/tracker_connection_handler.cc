@@ -7,6 +7,7 @@
 #include <google/protobuf/descriptor.h>
 #include <Poco/Exception.h>
 #include <iostream>
+#include <iterator>
 using namespace std;
 
 using Poco::Util::Application;
@@ -247,7 +248,10 @@ retcode_t TrackerConnectionHandler::HandlePublishResource(SharedPtr<Message> in,
         return ERROR_PROTO_TYPE_ERROR;
     }
 
-    ret = app_.PublishResource( publishProto->clientid(),  publishProto->fileid() );
+    Tracker::StringList fileids;
+    copy(publishProto->fileid().begin(), publishProto.fileid().end(), back_inserter(fileids) );
+
+    ret = app_.PublishResource( publishProto->clientid(),  publishProto->torrentid(), fileids);
     if( ret != ERROR_OK ){
         return ret;
     }
