@@ -3,6 +3,7 @@
 #include <Poco/Buffer.h>
 #include <Poco/Util/Application.h>
 #include <Poco/ByteOrder.h>
+#include <Poco/Bugcheck.h>
 #include <google/protobuf/descriptor.h>
 #include <google/protobuf/message.h>
 
@@ -65,6 +66,8 @@ retcode_t NetPack::receiveFrom(NetPack::SockType& sock){
     Int32 headerLength;
     retcode_t ret = this->receiveHeaderLength(sock, &headerLength);
     poco_debug_f2(logger_, "NetPack::receiveHeaderLength returns %d, local addr : %s", (int)ret, sock.address().toString());
+    poco_assert( headerLength > 0 && headerLength < 1000);
+    poco_debug_f2(logger_, "assert passed at file : %s, line : %d", string(__FILE__), __LINE__ - 1);
     if( ret != ERROR_OK ){
         poco_warning(logger_, "receiveHeaderLength error!");
         return ret;
@@ -133,6 +136,7 @@ void NetPack::set_message(int payloadType, const Message& msg){
 
 retcode_t NetPack::sendHeaderLength(SockType& sock) const{
     Int32 headerLength = Poco::ByteOrder::toNetwork( header_.ByteSize() );
+    poco_debug_f3(logger_, "headerLength to '%s' is '%d', local addr : %s", sock.peerAddress().toString(), header_.ByteSize(), sock.address().toString());
     if( sizeof(Int32) == sock.sendBytes(&headerLength, sizeof(Int32)) ){
         return ERROR_OK;
     }
@@ -152,5 +156,6 @@ retcode_t NetPack::receiveHeaderLength(SockType& sock, Int32* headerLength){
         }
     }
     *headerLength = Poco::ByteOrder::fromNetwork( *(reinterpret_cast<Int32*>(buf.begin())) );
+    poco_debug_f3(logger_, "headerLength from '%s' is '%d', local addr : %s", sock.peerAddress().toString(), *headerLength, sock.address().toString());
     return ERROR_OK;
 }

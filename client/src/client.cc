@@ -123,10 +123,13 @@ namespace CoolDown{
                         poco_warning_f1(logger(), "cannot login tracker : %s", tracker_address);
                     }
 
+                    /*
                     retcode_t ret = this->make_torrent(args[0], args[1],
                             1 << 20, 0, tracker_address);
                     poco_debug_f1(logger(), "make_torrent retcode : %d", (int)ret);
 
+                    */
+                    retcode_t ret = ERROR_OK;
                     if( ret != ERROR_OK){
                         return Application::EXIT_TEMPFAIL;
                     }else{

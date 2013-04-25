@@ -29,7 +29,7 @@ namespace CoolDown{
         jobInfo_(*jobInfoPtr_), 
         sockManager_(m), 
         cs_(jobInfo_, sockManager_), 
-        tp_(2, 4),
+        tp_(1, 1),
         tm_(tp_),
         logger_(logger){
             tm_.addObserver(
@@ -212,6 +212,7 @@ namespace CoolDown{
                         while( sock.isNull() ){
                             LocalSockManager::ConditionPtr cond = sockManager_.get_sock_idel_condition(peer_clientid);
                             cond->wait( this->idle_sock_mutex_);
+                            poco_notice(logger_, "wake up from waiting idle_sock_mutex_");
                             sock = sockManager_.get_idle_client_sock(peer_clientid);
                         }
                         //see if some error happend in get_idle_client_sock
@@ -247,8 +248,12 @@ namespace CoolDown{
                                 
                                 poco_debug_f1(logger_, "available thread : %d", tp_.available() );
                                 while( tp_.available() == 0 ){
-                                    this->available_thread_cond_.wait( this->available_thread_mutex_ );
-                                    poco_notice(logger_, "wake up from wait available_thread_cond_");
+                                    try{
+                                        this->available_thread_cond_.wait( this->available_thread_mutex_, WAIT_TIMEOUT);
+                                        poco_notice(logger_, "wake up from wait available_thread_cond_");
+                                    }catch(Poco::TimeoutException& e){
+                                        poco_notice(logger_, "wait available_thread_cond_ timeout.");
+                                    }
                                 }
                                 tm_.start( new DownloadTask(
                                             *fileInfo, 

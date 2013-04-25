@@ -85,7 +85,7 @@ namespace CoolDown{
 
             struct IdleSockSelector{
                 bool operator()(const SockList::value_type& v){
-                    return v.second == USED;
+                    return v.second == IDLE;
                 }
             };
 

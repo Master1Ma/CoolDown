@@ -41,7 +41,6 @@ namespace CoolDown{
         }
 
         void ClientConnectionHandler::onReadable(const AutoPtr<ReadableNotification>& pNotification){
-            poco_debug_f1(logger_, "Local addr '%s' sock is onReadable.", sock_.address().toString());
             NetPack in, out;
             retcode_t ret = in.receiveFrom( sock_ );
             if( ret != ERROR_OK ){
@@ -71,6 +70,7 @@ namespace CoolDown{
                 poco_information_f1(logger_, "Finish process 1 request from %s", peerAddress_ );
                 if( this->last_request_upload == true ){
                     //add task to uploadTaskManager and release ownership
+                    poco_debug_f1(logger_, "add upload task to remote addr : '%s'", peerAddress_);
                     app_.upload_manager().start(pTask);
                     pTask = NULL;
                 }

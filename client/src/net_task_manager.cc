@@ -1,5 +1,7 @@
 #include "net_task_manager.h"
+#include "upload_task.h"
 #include <Poco/Observer.h>
+#include <Poco/Bugcheck.h>
 
 using Poco::Observer;
 
@@ -22,11 +24,15 @@ namespace CoolDown{
         }
 
         void NetTaskManager::onTaskFinished(TaskFinishedNotification* pNf){
-            poco_warning(logger_, "UploadTask Finished!");
+            UploadTask* pTask = dynamic_cast<UploadTask*>( pNf->task() );
+            poco_assert( pTask != NULL );
+            poco_debug_f1(logger_, "UploadTask Finished! %s", pTask->DebugString());
         }
 
         void NetTaskManager::onTaskFailed(TaskFailedNotification* pNf){
-            poco_warning_f1(logger_, "UploadTask Failed! reason : %s", pNf->reason().displayText());
+            UploadTask* pTask = dynamic_cast<UploadTask*>( pNf->task() );
+            poco_assert( pTask != NULL );
+            poco_warning_f2(logger_, "UploadTask Failed! %s\nreason : %s", pTask->DebugString(), pNf->reason().displayText());
         }
     }
 }
