@@ -130,6 +130,7 @@ namespace CoolDown{
                 }
             
             }else{
+                sockIter->second = USED;
                 return sockIter->first;
             }
 
