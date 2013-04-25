@@ -1,0 +1,2 @@
+fix multi-thread download Netpack HeaderLength bug( negative header length or huge header length).
+fix some file not downloaded in torrent bug( music.torrent ).
