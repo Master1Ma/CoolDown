@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <fstream>
 #include <boost/foreach.hpp>
+#include <boost/bind.hpp>
 #include <Poco/Logger.h>
 #include <Poco/Exception.h>
 #include <Poco/Util/Application.h>
@@ -41,6 +42,13 @@ using namespace ClientProto;
 
 namespace CoolDown{
     namespace Client{
+
+            namespace {
+                void sock_guard(LocalSockManager::LocalSockManagerPtr& sockManager, const string& clientid, SockPtr* sock){
+                    sockManager->return_sock(clientid, *sock);
+                }
+            }
+
             CoolClient::CoolClient()
             :jobThreads_("JobThreadPool"),
             uploadManager_(logger()){
@@ -407,23 +415,24 @@ namespace CoolDown{
                 poco_assert( sock.isNull() == false );
                 poco_trace_f2(logger(), "pass assert at file : %s, line : %d", string(__FILE__), __LINE__ - 1);
 
+                //use guard to return_sock automatically 
+                typedef shared_ptr<LocalSockManager::SockPtr> SockGuard;
+                SockGuard guard(&sock, boost::bind(sock_guard, sockManager_, peer_clientid, _1) );
+
                 NetPack req( PAYLOAD_SHAKE_HAND, self );
                 retcode_t ret = req.sendBy( *sock );
                 if( ret != ERROR_OK ){
-                    sockManager_->return_sock(peer_clientid, sock);
                     poco_warning(logger(), "send shake_hand error.");
                     return ret;
                 }
                 NetPack res;
                 ret = res.receiveFrom( *sock );
                 if( ret != ERROR_OK ){
-                    sockManager_->return_sock(peer_clientid, sock);
                     poco_warning(logger(), "receive shake_hand error.");
                     return ret;
                 }
 
                 peer = *(res.message().cast<ShakeHand>());
-                sockManager_->return_sock(peer_clientid, sock);
                 return ERROR_OK;
             }
 

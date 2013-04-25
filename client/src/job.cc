@@ -29,7 +29,7 @@ namespace CoolDown{
         jobInfo_(*jobInfoPtr_), 
         sockManager_(m), 
         cs_(jobInfo_, sockManager_), 
-        tp_(),
+        tp_(2, 4),
         tm_(tp_),
         logger_(logger){
             tm_.addObserver(
@@ -197,16 +197,16 @@ namespace CoolDown{
                     poco_debug_f2(logger_, "Choose the index %d file owner, payload : %f", index, payload_percentage);
 
                     //see if the minimal payload is 100%
-                    if( 1 - payload_percentage < 1e-6 ){
-                        poco_debug(logger_, "Even the lowest payload client is 100% payload.");
-                        try{
-                            max_payload_cond_.wait(max_payload_mutex_, WAIT_TIMEOUT);
-                            poco_notice(logger_, "wake up from max_payload_cond_");
-                        }catch(Poco::TimeoutException& e){
-                            poco_notice(logger_, "Wait max_payload_cond_ timeout!");
-                        }
-                        continue;
-                    }else{
+                    //if( 1 - payload_percentage < 1e-6 ){
+                    //    poco_debug(logger_, "Even the lowest payload client is 100% payload.");
+                    //    try{
+                    //        max_payload_cond_.wait(max_payload_mutex_, WAIT_TIMEOUT);
+                    //        poco_notice(logger_, "wake up from max_payload_cond_");
+                    //    }catch(Poco::TimeoutException& e){
+                    //        poco_notice(logger_, "Wait max_payload_cond_ timeout!");
+                    //    }
+                    //    continue;
+                    //}else{
                         string peer_clientid( chunk_info->clientLists[index]->clientid );
                         LocalSockManager::SockPtr sock = sockManager_.get_idle_client_sock(peer_clientid);
                         while( sock.isNull() ){
@@ -216,7 +216,7 @@ namespace CoolDown{
                         }
                         //see if some error happend in get_idle_client_sock
                         if( sock.isNull() ){
-                            poco_warning_f1(logger_, "Unexpected null SockPtr return by sockManager_.get_idle_client_sock, client id :%s"                                            ,peer_clientid);
+                            poco_warning_f1(logger_, "Unexpected null SockPtr return by sockManager_.get_idle_client_sock, client id :%s",peer_clientid);
                             poco_assert( sock.isNull() == false );
                         }else{
                             poco_debug(logger_, "Get peer idle socket succeed.");
@@ -248,6 +248,7 @@ namespace CoolDown{
                                 poco_debug_f1(logger_, "available thread : %d", tp_.available() );
                                 while( tp_.available() == 0 ){
                                     this->available_thread_cond_.wait( this->available_thread_mutex_ );
+                                    poco_notice(logger_, "wake up from wait available_thread_cond_");
                                 }
                                 tm_.start( new DownloadTask(
                                             *fileInfo, 
@@ -262,7 +263,7 @@ namespace CoolDown{
                                 poco_warning_f1(logger_, "Got exception while start DownloadTask, %s", e.displayText() );
                             }
                         }
-                    }
+                    //}
                 }
             }
             tm_.joinAll();

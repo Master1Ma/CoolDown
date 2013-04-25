@@ -7,6 +7,7 @@
 #include "job_info.h"
 #include <vector>
 #include <string>
+#include <boost/shared_ptr.hpp>
 #include <Poco/Util/Application.h>
 #include <Poco/Util/ServerApplication.h>
 #include <Poco/Path.h>
@@ -18,6 +19,7 @@ using google::protobuf::Message;
 
 using std::vector;
 using std::string;
+using boost::shared_ptr;
 using Poco::Util::Application;
 using Poco::Util::ServerApplication;
 using Poco::Path;
@@ -39,6 +41,10 @@ namespace CoolDown{
     namespace Client{
 
             class Job;
+
+            typedef LocalSockManager::SockPtr SockPtr; 
+
+
             class CoolClient : public ServerApplication{
                 public:
 

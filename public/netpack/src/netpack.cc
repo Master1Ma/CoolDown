@@ -34,7 +34,9 @@ NetPack::NetPack(int payloadType, const Message& msg)
 retcode_t NetPack::sendBy(NetPack::SockType& sock) const{
 
     retcode_t ret = this->sendHeaderLength(sock);
+    poco_debug_f2(logger_, "NetPack::sendHeaderLength returns %d, local addr : %s", (int)ret, sock.address().toString());
     if( ret != ERROR_OK ){
+        poco_warning(logger_, "sendHeaderLength error!");
         return ERROR_PACK_SEND_HEADER_LENGTH;
     }
 
@@ -62,9 +64,12 @@ retcode_t NetPack::receiveFrom(NetPack::SockType& sock){
     this->clear();
     Int32 headerLength;
     retcode_t ret = this->receiveHeaderLength(sock, &headerLength);
+    poco_debug_f2(logger_, "NetPack::receiveHeaderLength returns %d, local addr : %s", (int)ret, sock.address().toString());
     if( ret != ERROR_OK ){
+        poco_warning(logger_, "receiveHeaderLength error!");
         return ret;
     }
+    poco_debug_f1(logger_, "HeaderLength %d", (int)headerLength);
 
     int bytesReceived;
     Buffer<char> headerBuf(headerLength);

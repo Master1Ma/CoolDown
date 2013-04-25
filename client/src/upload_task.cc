@@ -35,6 +35,7 @@ namespace CoolDown{
             if( nSend != chunk_size_ ){
                 throw Exception( format("%s, chunk_size is %d bytes but only send %d", name(), chunk_size_, nSend) );
             }
+            poco_debug_f3(logger_, "UploadTask succeed, \nlocal file path : %s\n offset : %uLd\nchunk_size : %d", file_->path(), offset_, chunk_size_);
             poco_debug_f1(logger_, "send %d bytes succeed.", nSend);
         }
     }

@@ -41,6 +41,7 @@ namespace CoolDown{
         }
 
         void ClientConnectionHandler::onReadable(const AutoPtr<ReadableNotification>& pNotification){
+            poco_debug_f1(logger_, "Local addr '%s' sock is onReadable.", sock_.address().toString());
             NetPack in, out;
             retcode_t ret = in.receiveFrom( sock_ );
             if( ret != ERROR_OK ){

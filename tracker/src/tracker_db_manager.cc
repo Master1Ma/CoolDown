@@ -14,7 +14,7 @@ using Poco::Data::SessionFactory;
 using Poco::Data::Statement;
 using Poco::Data::Limit;
 
-std::string connectionString = "user=root;password=123456;db=test;compress=true;auto-reconnect=true";
+std::string connectionString = "user=root;password=123456;db=test;compress=true;auto-reconnect=true;host=127.0.0.1;port=3306";
 
 TrackerDBManager::TrackerDBManager()
     :logger_(Application::instance().logger()),
