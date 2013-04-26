@@ -17,13 +17,13 @@ using Poco::Exception;
 namespace CoolDown{
     namespace Client{
         namespace{
-            string retrieve_fileid(const Torrent::File& file){
-                return file.checksum();
-            }
+            //string retrieve_fileid(const Torrent::File& file){
+            //    return file.checksum();
+            //}
 
-            int retrieve_chunk_size(const Torrent::File& file){
-                return file.chunk().size();
-            }
+            //int retrieve_chunk_size(const Torrent::File& file){
+            //    return file.chunk().size();
+            //}
         }
 
         //LocalFileInfo
@@ -41,6 +41,14 @@ namespace CoolDown{
                 //poco_assert( iter == files.end() );
 
                 string filepath = top_path + relative_path + filename;
+                StringList& same_files_path_list = same_files_[fileid];
+                same_files_path_list.push_back(filepath);
+
+                if( same_files_path_list.size() > 1 ){
+                    poco_notice_f2(logger_, "Find same file of path '%s' and path '%s'", same_files_[fileid][0], filepath);
+                    return ERROR_OK;
+                }
+
                 File dir( top_path + relative_path );
                 dir.createDirectories();
 
@@ -78,9 +86,24 @@ namespace CoolDown{
             }
             return res;
         }
+        
+        bool LocalFileInfo::has_local_file(const string& fileid, const string& relative_path, const string& filename){
+            FastMutex::ScopedLock lock(mutex_);
+            if( files.end() == files.find(fileid) ){
+                return false;
+            }else{
+                StringList& path_list = same_files_[fileid];
+                return find(path_list.begin(), path_list.end(), top_path + relative_path + filename ) != path_list.end() ;
+            }
+        }
+
         bool LocalFileInfo::has_file(const string& fileid){
             FastMutex::ScopedLock lock(mutex_);
             return files.end() != files.find(fileid);
+        }
+
+        map<string, StringList>& LocalFileInfo::same_files_map(){
+            return this->same_files_;
         }
 
         

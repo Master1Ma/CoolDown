@@ -8,6 +8,7 @@
 #include "client.pb.h"
 #include "client_connection_handler.h"
 
+#include <set>
 #include <algorithm>
 #include <fstream>
 #include <boost/foreach.hpp>
@@ -26,6 +27,7 @@
 #include <Poco/Thread.h>
 
 
+using std::set;
 using std::find;
 using std::ifstream;
 using std::ofstream;
@@ -146,7 +148,12 @@ namespace CoolDown{
                         poco_debug_f1(logger(), "add_job retcode : %d", (int)ret);
                         JobPtr pJob = this->get_job(handle);
                         poco_assert( pJob.isNull() == false );
+                        set<string> same_fileid;
                         BOOST_FOREACH(const string& fileid, pJob->JobInfo().fileidlist() ){
+                            if( same_fileid.find(fileid) != same_fileid.end() ){
+                                continue;
+                            }
+                            same_fileid.insert(fileid);
                             pJob->MutableJobInfo()->downloadInfo.bitmap_map[fileid]->flip();
                             pJob->MutableJobInfo()->localFileInfo.add_file(fileid, 
                                     pJob->MutableJobInfo()->torrentInfo.get_file(fileid)->relative_path(),

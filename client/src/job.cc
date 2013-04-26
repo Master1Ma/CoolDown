@@ -232,7 +232,7 @@ namespace CoolDown{
                             string fileid( chunk_info->fileid );
                             TorrentFileInfoPtr fileInfo = jobInfo_.torrentInfo.get_file(fileid);
 
-                            if( false == jobInfo_.localFileInfo.has_file(fileid) ){
+                            if( false == jobInfo_.localFileInfo.has_local_file(fileid, fileInfo->relative_path(), fileInfo->filename()) ){
                                 retcode_t create_file_ret = jobInfo_.localFileInfo.add_file( fileid, 
                                         fileInfo->relative_path(), fileInfo->filename(), fileInfo->size());
                                 if( create_file_ret != ERROR_OK ){
@@ -278,6 +278,28 @@ namespace CoolDown{
                 }
             }
             tm_.joinAll();
+            typedef map<string, StringList> same_files_map_t ;
+            same_files_map_t& same_files = jobInfo_.localFileInfo.same_files_map();
+            poco_debug(logger_, "Going to check if same files exist.");
+            BOOST_FOREACH(same_files_map_t::value_type& p, same_files){
+                if( p.second.size() == 1 ){
+                    //no same file of this fileid
+                    continue;
+                }else{
+                    File same_file_source(p.second[0]);
+                    for(int pos = 1; pos != p.second.size(); ++pos){
+                        string file_path_str( p.second[pos] );
+                        Path file_path( file_path_str );
+                        Path dir_path = file_path.parent();
+                        File dir(dir_path);
+                        dir.createDirectories();
+
+                        same_file_source.copyTo( file_path_str);
+                        poco_information_f2(logger_, "copy %s to %s.", same_file_source.path(), file_path_str);
+                    }
+                }
+            }
+
             poco_debug(logger_, "Job finished!");
         }
 
