@@ -240,7 +240,6 @@ namespace CoolDown{
                             }
 
                             FilePtr file = jobInfo_.localFileInfo.get_file(fileid);
-                            poco_trace(logger_, "Before start new download task.");
                             try{
                                 poco_assert( fileInfo.isNull() == false );
                                 poco_assert( sock.isNull() == false );
@@ -279,7 +278,7 @@ namespace CoolDown{
             string tracker_address(jobInfo_.torrentInfo.tracker_address());
             poco_debug_f1(logger_, "going to request clients from %s", tracker_address);
             poco_assert( jobInfo_.downloadInfo.percentage_map.find(fileid) != jobInfo_.downloadInfo.percentage_map.end() );
-            poco_debug_f2(logger_, "assert passed at file : %s, line : %d", string(__FILE__), __LINE__ - 1);
+            poco_trace_f2(logger_, "assert passed at file : %s, line : %d", string(__FILE__), __LINE__ - 1);
             int percentage = jobInfo_.downloadInfo.percentage_map[fileid];
             int needCount = 20;
             CoolClient::ClientIdCollection clientidList;

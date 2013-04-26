@@ -2,29 +2,22 @@
 #include "local_sock_manager.h"
 #include "job_info.h"
 #include <Poco/Bugcheck.h>
+#include <Poco/Util/Application.h>
+#include <boost/foreach.hpp>
 
 
 namespace CoolDown{
     namespace Client{
 
         ChunkSelector::ChunkSelector(JobInfo& info, LocalSockManager& sockManager)
-        :jobInfo_(info){
+        :jobInfo_(info),
+        logger_(::Poco::Util::Application::instance().logger()){
         //sockManager_(sockManager){
         }
         ChunkSelector::~ChunkSelector(){
         }
 
         vector<string> ChunkSelector::fileidlist(){
-            /*
-            const TorrentInfo::file_map_t& fileMap = jobInfo_.torrentInfo.get_file_map();
-            TorrentInfo::file_map_t::const_iterator iter = fileMap.begin();
-            vector<string> fileids;
-            while( iter != fileMap.end() ) {
-                fileids.push_back(iter->first);
-                ++iter;
-            }
-            return fileids;
-            */
             return jobInfo_.fileidlist();
         }
 
@@ -32,9 +25,10 @@ namespace CoolDown{
             //remove all chunk in queue
             this->chunk_queue_ = chunk_priority_queue_t();
             const TorrentInfo::file_map_t& fileMap = jobInfo_.torrentInfo.get_file_map();
-            TorrentInfo::file_map_t::const_iterator iter = fileMap.begin();
-
-            while( iter != fileMap.end() ){
+            BOOST_FOREACH(const string& fileid, this->fileidlist() ){
+                TorrentInfo::file_map_t::const_iterator iter = fileMap.find(fileid);
+                poco_assert( iter != fileMap.end() );
+                poco_trace_f2(logger_, "assert passed at file : %s, line : %d", string(__FILE__), __LINE__ - 1);
 
                 for(int chunk_pos = 0; chunk_pos != iter->second->chunk_count(); ++chunk_pos){
                     if( jobInfo_.downloadInfo.bitmap_map[iter->first]->test(chunk_pos) ){
@@ -46,9 +40,10 @@ namespace CoolDown{
                         info->fileid = iter->first;
                         get_priority(info, 0);
                         chunk_queue_.push(info);
+                        poco_debug_f1(logger_, "new chunk of file '%s' has been added to chunk_queue_", info->fileid);
                     }
                 }
-                ++iter;
+                
             }
         }
 

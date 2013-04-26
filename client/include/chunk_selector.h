@@ -6,9 +6,11 @@
 #include <string>
 #include <queue>
 #include <Poco/Mutex.h>
+#include <Poco/Logger.h>
 using std::vector;
 using std::priority_queue;
 using Poco::FastMutex;
+using Poco::Logger;
 
 namespace CoolDown{
     namespace Client{
@@ -68,6 +70,7 @@ namespace CoolDown{
                 typedef priority_queue<ChunkInfoPtr, vector<ChunkInfoPtr>, chunk_cmp> chunk_priority_queue_t;
                 chunk_priority_queue_t chunk_queue_;
                 FastMutex chunk_queue_mutex_;
+                Logger& logger_;
         };
     }
 }

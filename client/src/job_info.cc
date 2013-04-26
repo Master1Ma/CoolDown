@@ -6,6 +6,7 @@
 #include <Poco/Util/Application.h>
 #include <Poco/Bugcheck.h>
 #include <Poco/Exception.h>
+#include <boost/foreach.hpp>
 
 using std::back_inserter;
 using Poco::Logger;
@@ -189,6 +190,17 @@ namespace CoolDown{
          localFileInfo(top_path),
          torrentInfo(torrent)
         {
+            fileidlist_.reserve( torrent.file().size() );
+            BOOST_FOREACH(const Torrent::File& file, torrent.file() ){
+                int chunk_size = file.chunk().size();
+                string fileid( file.checksum() );
+
+                poco_debug_f2(logger_, "add file to Job, fileid : '%s', name : '%s'", fileid, file.filename() );
+                downloadInfo.percentage_map[fileid] = 0;
+                downloadInfo.bitmap_map[fileid] = new file_bitmap_t( chunk_size_list[i], 0 );
+                fileidlist_.push_back(fileidlist_);
+            }
+            /*
             vector<int> chunk_size_list;
             transform(torrent.file().begin(), torrent.file().end(), back_inserter(chunk_size_list), retrieve_chunk_size);
             transform(torrent.file().begin(), torrent.file().end(), back_inserter(fileidlist_), retrieve_fileid);
@@ -198,6 +210,7 @@ namespace CoolDown{
                 downloadInfo.percentage_map[fileid] = 0;
                 downloadInfo.bitmap_map[fileid] = new file_bitmap_t( chunk_size_list[i], 0 );
             }
+            */
         }
 
         JobInfo::~JobInfo(){
