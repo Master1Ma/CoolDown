@@ -29,7 +29,7 @@ namespace CoolDown{
         jobInfo_(*jobInfoPtr_), 
         sockManager_(m), 
         cs_(jobInfo_, sockManager_), 
-        tp_(1, 1),
+        tp_(2, 4),
         tm_(tp_),
         logger_(logger){
             tm_.addObserver(
