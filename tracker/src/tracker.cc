@@ -138,7 +138,8 @@ retcode_t Tracker::RequestClients(const string& fileid, int percentage, int need
     if( ret != ERROR_OK ){
         return ret;
     }
-    if( clients->size() < needCount ){
+
+    if( clients->size() < needCount && percentage >0 ){
         ret = dbManager_->search_less_equal_percentage(fileid, percentage, needCount - clients->size(), ownedClientIdList, clients);
         if( ret != ERROR_OK ){
             return ret;

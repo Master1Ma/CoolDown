@@ -205,6 +205,9 @@ retcode_t TrackerConnectionHandler::HandleRequestPeer(SharedPtr<Message> in, Que
         return ret;
     }
 
+    poco_debug_f3(logger_, "Get %d clients of file '%s' for %s", 
+            (int)fileInfoCollection.size(), out->fileid(), sock_.peerAddress().toString());
+
     out->set_count( fileInfoCollection.size() );
     for(int i = 0; i != fileInfoCollection.size(); ++i){
         std::pair<Tracker::ClientPtr, Tracker::FileOwnerInfoPtr>& v = fileInfoCollection[i];

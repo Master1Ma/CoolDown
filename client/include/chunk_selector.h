@@ -22,6 +22,7 @@ namespace CoolDown{
             DOWNLOADING = 2,
             FINISHED = 3,
             FAILED = 4,
+            NOOWNER = 5,
         };
 
         struct ChunkInfo{
@@ -53,6 +54,7 @@ namespace CoolDown{
                 ChunkInfoPtr get_chunk();
                 void report_success_chunk(int chunk_num, const string& fileid);
                 void report_failed_chunk(int chunk_num, const string& fileid);
+                void report_no_owner_chunk(int chunk_num, const string& fileid);
 
             private:
                 void get_priority(ChunkInfoPtr info, int baseline);

@@ -1,1 +1,3 @@
-fix some file not downloaded in torrent bug( music.torrent ).
+1.fix some file not downloaded in torrent bug( music.torrent ). 
+    update : this is because when download two same file, the fileid is the same, and they share too many info in the data structure.
+    to be fixed.

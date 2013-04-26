@@ -274,7 +274,7 @@ namespace CoolDown{
 
                 SharedPtr<QueryPeerReply> r;
                 retcode_t ret = handle_reply_message< QueryPeerReply >( sock, msg, PAYLOAD_REQUEST_PEER, &r);
-                poco_notice_f1(logger(), "Recv %d clients by QueryPeer.", r->info().size());
+                poco_notice_f2(logger(), "Recv %d clients by QueryPeer. fileid = '%s'", r->info().size(), fileid);
                 if( ret != ERROR_OK || r->returncode() != ERROR_OK ){
                     poco_warning_f2(logger(), "CoolClient::request_clients error. func ret : %d, request ret : %d",
                             (int)ret, (int)r->returncode() );

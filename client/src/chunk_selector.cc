@@ -51,20 +51,20 @@ namespace CoolDown{
             JobInfo::owner_info_map_t& infoMap = jobInfo_.ownerInfoMap;
             poco_assert( infoMap.find(info->fileid) != infoMap.end() );
             const FileOwnerInfoPtrList& infoList = infoMap[ info->fileid ];
+            poco_debug_f2(logger_, "%d clients owns file '%s' ", (int)infoList.size(), info->fileid);
 
             info->clientLists.clear();
             info->priority = 0;
 
-            FileOwnerInfoPtrList::const_iterator iter = infoList.begin();
-            while( iter != infoList.end() ){
-                FileOwnerInfoPtr p = *iter;
+            BOOST_FOREACH(FileOwnerInfoPtr p, infoList){
+                //poco_debug_f1(logger_, "to_ulong = %lu", p->bitmap_ptr->to_ulong());
                 if( p->bitmap_ptr->test(info->chunk_num) ){
                     info->clientLists.push_back(p);
                 }
-                ++iter;
             }
 
             if( info->clientLists.size() == 0 ){
+                poco_notice_f2(logger_, "no client has file '%s', chunk_pos '%d'", info->fileid, info->chunk_num);
                 info->priority = UNAVAILABLE;
             }else if( info->clientLists.size() < RARE_COUNT ){
                 info->priority = HIGHEST - info->clientLists.size();
@@ -96,6 +96,18 @@ namespace CoolDown{
             info->chunk_num = chunk_num;
             info->fileid = fileid;
             get_priority(info, 0 - NORMAL);
+            FastMutex::ScopedLock lock( chunk_queue_mutex_ );
+            chunk_queue_.push(info);
+        }
+
+        void ChunkSelector::report_no_owner_chunk(int chunk_num, const string& fileid){
+            ChunkInfoPtr info(new ChunkInfo);
+            info->status = NOOWNER;
+            info->chunk_num = chunk_num;
+            info->fileid = fileid;
+
+            //since no owner of this chunk is online, we give it the lowest priority, which is less-equal than 0.
+            get_priority(info, 0 - HIGHEST);
             FastMutex::ScopedLock lock( chunk_queue_mutex_ );
             chunk_queue_.push(info);
         }

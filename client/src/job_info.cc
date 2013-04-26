@@ -37,7 +37,8 @@ namespace CoolDown{
             try{
                 //make sure we don't add a file twice
                 map<string, FilePtr>::iterator iter = files.find(fileid);
-                poco_assert( iter == files.end() );
+                //a torrent may contain the same file servral times, so this assert is wrong.
+                //poco_assert( iter == files.end() );
 
                 string filepath = top_path + relative_path + filename;
                 File dir( top_path + relative_path );
@@ -197,8 +198,8 @@ namespace CoolDown{
 
                 poco_debug_f2(logger_, "add file to Job, fileid : '%s', name : '%s'", fileid, file.filename() );
                 downloadInfo.percentage_map[fileid] = 0;
-                downloadInfo.bitmap_map[fileid] = new file_bitmap_t( chunk_size_list[i], 0 );
-                fileidlist_.push_back(fileidlist_);
+                downloadInfo.bitmap_map[fileid] = new file_bitmap_t( chunk_size, 0 );
+                fileidlist_.push_back(fileid);
             }
             /*
             vector<int> chunk_size_list;

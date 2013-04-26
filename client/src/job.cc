@@ -6,11 +6,11 @@
 #include <cstdlib>
 #include <vector>
 #include <algorithm>
+#include <boost/foreach.hpp>
 #include <Poco/Util/Application.h>
 #include <Poco/Observer.h>
 #include <Poco/Path.h>
 #include <Poco/File.h>
-//#include <Poco/Bugcheck.h>
 
 using std::vector;
 using std::min_element;
@@ -105,10 +105,12 @@ namespace CoolDown{
         void Job::run(){
             poco_debug(logger_, "Job start running!");
             vector<string> fileidlist( cs_.fileidlist() );
-            vector<string>::iterator iter = fileidlist.begin();
             retcode_t ret = ERROR_OK;
-            while( iter != fileidlist.end() ){
-                string fileid(*iter);
+            BOOST_FOREACH(const string& fileid, fileidlist){
+                if( jobInfo_.ownerInfoMap.find(fileid) != jobInfo_.ownerInfoMap.end() ){
+                    //we have clients for this file, so pass it
+                    continue;
+                }
 
                 ret = this->request_clients(fileid);
                 poco_debug_f2(logger_, "request clients for fileid : %s, return code : %d", fileid, (int)ret);
@@ -122,7 +124,7 @@ namespace CoolDown{
                         
                         FileOwnerInfoPtrList& infoList = jobInfo_.ownerInfoMap[fileid];
                         FileOwnerInfoPtrList::iterator infoIter = infoList.begin();
-                        poco_debug(logger_, "Before walk FileOwnerInfoPtrList to shake_hand");
+                        poco_debug(logger_, "Before traverse FileOwnerInfoPtrList to shake_hand");
                         while( infoIter != infoList.end() ){
                             if( !sockManager_.is_connected((*infoIter)->clientid) ){
                                 retcode_t conn_ret = sockManager_.connect_client(
@@ -142,13 +144,13 @@ namespace CoolDown{
                                 poco_warning_f2(logger_, "Cannot shake hand with clientid : %s, fileid : %s",
                                         (*infoIter)->clientid, fileid);
                             }else{
-                                poco_debug_f2(logger_, "shake hand with client succeed, clientid : %s, fileid : %s",
-                                        (*infoIter)->clientid, fileid);
+                                
+                                //poco_debug_f2(logger_, "shake hand with client succeed, clientid : %s, fileid : %s",
+                                //        (*infoIter)->clientid, fileid);
                             }
                             ++infoIter;
                         }
                     }
-                ++iter;
             }
 
             poco_debug(logger_, "Before init_queue.");
@@ -171,14 +173,19 @@ namespace CoolDown{
                     if( chunk_info.isNull() ){
                         poco_debug(logger_, "All chunk have been processed. leave the while(1) loop");
                         break;
+                    }else if( chunk_info->status == NOOWNER ){
+                        poco_notice(logger_, "all chunk left in queue are of no owners.");
+                        break;
                     }else{
                         poco_debug_f2(logger_, "start downloading file '%s', chunk_pos : %d", chunk_info->fileid, chunk_info->chunk_num);
                     }
                     vector<double> payloads;
                     int client_count = chunk_info->clientLists.size();
                     if( client_count == 0 ){
-                        poco_notice(logger_, "Current no client has this chunk.");
-                        break;
+                        poco_notice_f2(logger_, "Current no client has this chunk. chunk_pos = %d, fileid = '%s'", 
+                                chunk_info->chunk_num, chunk_info->fileid);
+                        cs_.report_no_owner_chunk(chunk_info->chunk_num, chunk_info->fileid);
+                        continue;
                     }
 
                     poco_debug_f1(logger_, "Download chunk from %d clients", client_count);
