@@ -49,6 +49,10 @@ namespace CoolDown{
                 void sock_guard(LocalSockManager::LocalSockManagerPtr& sockManager, const string& clientid, SockPtr* sock){
                     sockManager->return_sock(clientid, *sock);
                 }
+
+                bool find_info_by_relative_path_and_name(const TorrentFileInfoPtr& info, const string& relative_path, const string& filename){
+                    return info->relative_path() == relative_path && info->filename() == filename;
+                }
             }
 
             CoolClient::CoolClient()
@@ -150,16 +154,19 @@ namespace CoolDown{
                         poco_assert( pJob.isNull() == false );
                         set<string> same_fileid;
                         BOOST_FOREACH(const string& fileid, pJob->JobInfo().fileidlist() ){
-                            if( same_fileid.find(fileid) != same_fileid.end() ){
-                                continue;
-                            }
-                            same_fileid.insert(fileid);
-                            pJob->MutableJobInfo()->downloadInfo.bitmap_map[fileid]->flip();
-                            pJob->MutableJobInfo()->localFileInfo.add_file(fileid, 
+                            retcode_t ret =pJob->MutableJobInfo()->localFileInfo.add_file(fileid, 
                                     pJob->MutableJobInfo()->torrentInfo.get_file(fileid)->relative_path(),
                                     pJob->MutableJobInfo()->torrentInfo.get_file(fileid)->filename(),
                                     pJob->MutableJobInfo()->torrentInfo.get_file(fileid)->size()
                                     );
+
+                            poco_debug_f2(logger(), "add '%s' to localFileInfo returns %d", pJob->MutableJobInfo()->torrentInfo.get_file(fileid)->filename(), (int)ret);
+                            if( same_fileid.find(fileid) != same_fileid.end() ){
+                                continue;
+                            }else{
+                                same_fileid.insert(fileid);
+                                pJob->MutableJobInfo()->downloadInfo.bitmap_map[fileid]->flip();
+                            }
                         }
 
                         poco_debug_f1(logger(), "client listen on port : %d", LOCAL_PORT);

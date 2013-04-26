@@ -188,8 +188,9 @@ namespace CoolDown{
         }
         
         const TorrentFileInfoPtr& TorrentInfo::get_file(const string& fileid){
-            map<string, TorrentFileInfoPtr>::iterator iter = fileMap_.find(fileid);
+            file_map_t iter = fileMap_.find(fileid);
             poco_assert( iter != fileMap_.end() );
+            //file_map_t::mapped_type::iterator infoIter = find_if( iter->second.begin(), iter->second.end(), 
             return iter->second;
         }
 
