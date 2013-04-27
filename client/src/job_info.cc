@@ -1,5 +1,6 @@
 #include "job_info.h"
 #include "client.h"
+#include <set>
 #include <algorithm>
 #include <iterator>
 #include <Poco/Logger.h>
@@ -8,6 +9,7 @@
 #include <Poco/Exception.h>
 #include <boost/foreach.hpp>
 
+using std::set;
 using std::back_inserter;
 using Poco::Logger;
 using Poco::Util::Application;
@@ -257,11 +259,13 @@ namespace CoolDown{
         }
 
         StringList JobInfo::UniqueFileidList() const{
-            StringList res(this->fileidlist_);
-            StringList::iterator end = unique(res.begin(), res.end());
-            poco_debug_f1( logger_, "distance : %d", int( distance(res.begin(), end) ) );
-            res.resize( distance(res.begin(), end) );
-            return res;
+            //StringList res(this->fileidlist_);
+            set<string> unique_fileids(this->fileidlist_.begin(), this->fileidlist_.end());
+            return StringList(unique_fileids.begin(), unique_fileids.end());
+            //StringList::iterator end = unique(res.begin(), res.end());
+            //poco_debug_f1( logger_, "distance : %d", int( distance(res.begin(), end) ) );
+            //res.resize( distance(res.begin(), end) );
+            //return res;
         }
 
     }
