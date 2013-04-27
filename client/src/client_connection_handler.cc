@@ -150,7 +150,7 @@ err:
 
             poco_assert( file.isNull() == false );
             poco_assert( chunk_size > 0 );
-            pTask = new UploadTask(file, offset, chunk_size, this->sock_);
+            pTask = new UploadTask(pJob->MutableJobInfo()->downloadInfo, file, offset, chunk_size, this->sock_);
             reply->set_returncode(ERROR_OK);
             return ERROR_OK;
         }

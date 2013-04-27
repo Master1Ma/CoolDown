@@ -42,7 +42,7 @@ namespace CoolDown{
                 //a torrent may contain the same file servral times, so this assert is wrong.
                 //poco_assert( iter == files.end() );
 
-                string filepath = top_path + relative_path + filename;
+                string filepath = Poco::format("%s%s%s", top_path, relative_path, filename);
                 StringList& same_files_path_list = same_files_[fileid];
                 same_files_path_list.push_back(filepath);
 
@@ -208,6 +208,8 @@ namespace CoolDown{
         :is_finished(false),
         is_download_paused(true),
         is_upload_paused(true),
+        bytes_upload_this_second(0),
+        bytes_download_this_second(0),
         upload_speed_limit(1<<31),
         download_speed_limit(1<<31)
         {

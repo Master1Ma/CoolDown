@@ -7,6 +7,7 @@
 #include "verification.h"
 #include "client.pb.h"
 #include "client_connection_handler.h"
+#include "job_info_collector.h"
 
 #include <set>
 #include <algorithm>
@@ -96,6 +97,11 @@ namespace CoolDown{
                 string tracker_ip("127.0.0.1");
                 string tracker_address( format("%s:%d", tracker_ip, (int)CoolClient::TRACKER_PORT) );
                 poco_debug_f1(logger(), "run application with %d", (int)args.size());
+                Thread job_info_collector_thread;
+                job_info_collector_thread.start( *(new JobInfoCollector) );
+
+                //Timer info_collector_timer(0, 1000);
+                //info_collector_timer.start(TimerCallback<CoolClient>(*this, &CoolClient::onJobInfoCollectorWakeUp));
 
                 if( args.size() == 1 ){
 
@@ -509,6 +515,25 @@ namespace CoolDown{
                 return JobPtr(NULL);
             }
 
+            void CoolClient::onJobInfoCollectorWakeUp(Timer& timer){
+                BOOST_FOREACH(JobMap::value_type& p, jobs_){
+                    int handle = p.first;
+                    JobInfoPtr pInfo = p.second->MutableJobInfo();
+                    UInt64 bytes_upload_this_second = pInfo->downloadInfo.bytes_upload_this_second;
+                    UInt64 bytes_download_this_second = pInfo->downloadInfo.bytes_download_this_second;
+                    string upload_speed, download_speed;
+                    format_speed(bytes_upload_this_second, &upload_speed);
+                    format_speed(bytes_download_this_second, &download_speed);
+
+                    poco_notice_f3(logger(), "Job handle : %d, upload speed : %s, download speed : %s",
+                            handle, upload_speed, download_speed);
+
+                    pInfo->downloadInfo.bytes_upload_this_second = 0;
+                    pInfo->downloadInfo.bytes_download_this_second = 0;
+                    pInfo->downloadInfo.download_speed_limit_cond.broadcast();
+                }
+            }
+
             retcode_t CoolClient::parse_torrent(const Path& torrent_file_path, Torrent::Torrent* pTorrent){
                 ifstream ifs(torrent_file_path.toString().c_str() );
                 poco_assert(pTorrent != NULL);
@@ -523,6 +548,17 @@ namespace CoolDown{
             string CoolClient::current_time() const{
                 LocalDateTime now;
                 return Poco::DateTimeFormatter::format(now, Poco::DateTimeFormat::HTTP_FORMAT);
+            }
+
+            void CoolClient::format_speed(UInt64 speed, string* formatted_speed){
+                if( speed > (1 << 20) ){
+                    // MB level
+                    format(*formatted_speed, "%.2f MB/s", (double)speed / (1 << 20) );
+                }else if ( speed > (1 << 10) ){
+                    format(*formatted_speed, "%.2f KB/s", (double)speed / (1 << 10) );
+                }else{
+                    format(*formatted_speed, "%Lu B/s", speed);
+                }
             }
 
             string CoolClient::clientid() const{

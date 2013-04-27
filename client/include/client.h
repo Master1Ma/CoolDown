@@ -14,6 +14,8 @@
 #include <Poco/File.h>
 #include <Poco/Types.h>
 #include <Poco/ThreadPool.h>
+#include <Poco/Timer.h>
+#include <Poco/Condition.h>
 #include <google/protobuf/message.h>
 using google::protobuf::Message;
 
@@ -26,8 +28,12 @@ using Poco::Path;
 using Poco::File;
 using Poco::Int32;
 using Poco::Int64;
+using Poco::UInt64;
 using Poco::TaskManager;
 using Poco::ThreadPool;
+using Poco::Timer;
+using Poco::TimerCallback;
+using Poco::Condition;
 
 namespace Torrent{
     class Torrent;
@@ -85,6 +91,12 @@ namespace CoolDown{
                     JobPtr get_job(int handle);
                     JobPtr get_job(const string& fileid);
 
+                    //collect Job runtime info
+                    void onJobInfoCollectorWakeUp(Timer& timer);
+                    Condition& GetInfoCollectorCond(){
+                        return this->jobInfoCollectorTerminateCond_;
+                    }
+
 
 
                     //torrent operations
@@ -95,9 +107,13 @@ namespace CoolDown{
                     //self identity
                     string clientid() const;
 
+
+                    //utilities functions
                     string current_time() const;
+                    static void format_speed(UInt64 speed, string* formatted_speed);
 
                     void set_make_torrent_progress_callback(make_torrent_progress_callback_t callback);
+
 
                 private:
 
@@ -117,6 +133,8 @@ namespace CoolDown{
                     typedef map<int, JobPtr> JobMap;
                     JobMap jobs_;
                     ThreadPool jobThreads_;
+
+                    Condition jobInfoCollectorTerminateCond_;
 
                     //NetTaskManager downloadManager_;
                     NetTaskManager uploadManager_;

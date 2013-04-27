@@ -23,9 +23,10 @@ namespace CoolDown{
         typedef SharedPtr<StreamSocket> SockPtr;
         typedef SharedPtr<File> FilePtr;
 
+        struct DownloadInfo;
         class UploadTask : public Task{
             public:
-                UploadTask(const FilePtr& file, UInt64 offset, int chunk_size, StreamSocket& sock);
+                UploadTask(DownloadInfo& downloadInfo, const FilePtr& file, UInt64 offset, int chunk_size, StreamSocket& sock);
                 ~UploadTask();
 
                 void runTask();
@@ -50,6 +51,7 @@ namespace CoolDown{
                 }
 
             private:
+                DownloadInfo& downloadInfo_;
                 FilePtr file_;
                 UInt64 offset_;
                 int chunk_size_;
