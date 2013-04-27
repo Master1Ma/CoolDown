@@ -145,8 +145,8 @@ err:
 
             poco_trace(logger_, "in HandleUploadRequest, get job succeed!");
             SharedPtr<File> file = pJob->MutableJobInfo()->localFileInfo.get_file(fileid);
-            UInt64 offset =  pJob->MutableJobInfo()->torrentInfo.get_file(fileid)->chunk_offset(chunk_pos);
-            int chunk_size = pJob->MutableJobInfo()->torrentInfo.get_file(fileid)->chunk_size(chunk_pos);
+            UInt64 offset =  pJob->MutableJobInfo()->torrentInfo.get_one_file_of_same_fileid(fileid)->chunk_offset(chunk_pos);
+            int chunk_size = pJob->MutableJobInfo()->torrentInfo.get_one_file_of_same_fileid(fileid)->chunk_size(chunk_pos);
 
             poco_assert( file.isNull() == false );
             poco_assert( chunk_size > 0 );

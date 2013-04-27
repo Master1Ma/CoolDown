@@ -36,7 +36,7 @@ namespace CoolDown{
             Logger& logger_ = Application::instance().logger();
             try{
                 //make sure we don't add a file twice
-                map<string, FilePtr>::iterator iter = files.find(fileid);
+                //map<string, FilePtr>::iterator iter = files.find(fileid);
                 //a torrent may contain the same file servral times, so this assert is wrong.
                 //poco_assert( iter == files.end() );
 
@@ -172,7 +172,7 @@ namespace CoolDown{
         file_count_(torrent_.file().size()){
             for(int pos = 0; pos != torrent_.file().size(); ++pos){
                 const Torrent::File& file = torrent_.file().Get(pos);
-                fileMap_[file.checksum()] = TorrentFileInfoPtr(new TorrentFileInfo(file) );
+                fileMap_[file.checksum()].push_back( TorrentFileInfoPtr(new TorrentFileInfo(file) ) );
             }
         }
 
@@ -187,11 +187,14 @@ namespace CoolDown{
             return this->file_count_;
         }
         
-        const TorrentFileInfoPtr& TorrentInfo::get_file(const string& fileid){
-            file_map_t iter = fileMap_.find(fileid);
+        //const TorrentFileInfoPtr& TorrentInfo::get_file(const string& fileid, const string& relative_path, const string& filename){
+        //}
+
+        const TorrentFileInfoPtr& TorrentInfo::get_one_file_of_same_fileid(const string& fileid){
+            file_map_t::iterator iter = fileMap_.find(fileid);
             poco_assert( iter != fileMap_.end() );
-            //file_map_t::mapped_type::iterator infoIter = find_if( iter->second.begin(), iter->second.end(), 
-            return iter->second;
+            poco_assert( iter->second.size() >= 1 );
+            return iter->second.at(0);
         }
 
         string TorrentInfo::tracker_address() const{
@@ -219,10 +222,14 @@ namespace CoolDown{
             BOOST_FOREACH(const Torrent::File& file, torrent.file() ){
                 int chunk_size = file.chunk().size();
                 string fileid( file.checksum() );
+                string relative_path( file.relativepath() );
+                string filename( file.filename() );
+                Int64 filesize( file.size() );
 
-                poco_debug_f2(logger_, "add file to Job, fileid : '%s', name : '%s'", fileid, file.filename() );
+                poco_debug_f2(logger_, "add file to Job, fileid : '%s', name : '%s'", fileid, filename );
                 downloadInfo.percentage_map[fileid] = 0;
                 downloadInfo.bitmap_map[fileid] = new file_bitmap_t( chunk_size, 0 );
+                localFileInfo.add_file(fileid, relative_path, filename, filesize);
                 fileidlist_.push_back(fileid);
             }
             /*
@@ -245,8 +252,16 @@ namespace CoolDown{
             return app_.clientid();
         }
 
-        const vector<string>& JobInfo::fileidlist() const{
+        const StringList& JobInfo::fileidlist() const{
             return this->fileidlist_;
+        }
+
+        StringList JobInfo::UniqueFileidList() const{
+            StringList res(this->fileidlist_);
+            StringList::iterator end = unique(res.begin(), res.end());
+            poco_debug_f1( logger_, "distance : %d", int( distance(res.begin(), end) ) );
+            res.resize( distance(res.begin(), end) );
+            return res;
         }
 
     }

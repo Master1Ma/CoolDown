@@ -90,7 +90,8 @@ namespace CoolDown{
                 ~TorrentInfo();
                 int get_file_count() const;
                 const file_map_t& get_file_map() const;
-                const TorrentFileInfoPtr& get_file(const string& fileid);
+                const TorrentFileInfoPtr& get_one_file_of_same_fileid(const string& fileid);
+                const TorrentFileInfoPtr& get_file(const string& fileid, const string& relative_path, const string& filename);
                 string tracker_address() const;
 
             private:
@@ -166,14 +167,16 @@ namespace CoolDown{
             private:
                 CoolClient& app_;
                 Logger& logger_;
-                vector<string> fileidlist_;
+                StringList fileidlist_;
 
             public:
                 JobInfo(const Torrent::Torrent& torrent, const string& top_path);
                 ~JobInfo();
 
                 string clientid() const;
-                const vector<string>& fileidlist() const;
+                const StringList& fileidlist() const;
+                //this return a stringlist on stack, so do NOT use reference
+                StringList UniqueFileidList() const;
 
                 //key : fileid, value : FileOwnerInfo
                 typedef map<string, FileOwnerInfoPtrList> owner_info_map_t;

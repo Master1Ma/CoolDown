@@ -25,12 +25,16 @@ namespace CoolDown{
             //remove all chunk in queue
             this->chunk_queue_ = chunk_priority_queue_t();
             const TorrentInfo::file_map_t& fileMap = jobInfo_.torrentInfo.get_file_map();
-            BOOST_FOREACH(const string& fileid, this->fileidlist() ){
+            BOOST_FOREACH(const string& fileid, jobInfo_.UniqueFileidList() ){
                 TorrentInfo::file_map_t::const_iterator iter = fileMap.find(fileid);
                 poco_assert( iter != fileMap.end() );
                 poco_trace_f2(logger_, "assert passed at file : %s, line : %d", string(__FILE__), __LINE__ - 1);
 
-                for(int chunk_pos = 0; chunk_pos != iter->second->chunk_count(); ++chunk_pos){
+                poco_assert( iter->second.size() != 0 );
+                poco_trace_f2(logger_, "assert passed at file : %s, line : %d", string(__FILE__), __LINE__ - 1);
+
+                int chunk_count = iter->second.at(0)->chunk_count();
+                for(int chunk_pos = 0; chunk_pos != chunk_count; ++chunk_pos){
                     if( jobInfo_.downloadInfo.bitmap_map[iter->first]->test(chunk_pos) ){
                         //this part has been downloaded
                         continue;

@@ -230,21 +230,31 @@ namespace CoolDown{
                             poco_debug(logger_, "Get peer idle socket succeed.");
                             int chunk_pos = chunk_info->chunk_num;
                             string fileid( chunk_info->fileid );
-                            TorrentFileInfoPtr fileInfo = jobInfo_.torrentInfo.get_file(fileid);
 
-                            if( false == jobInfo_.localFileInfo.has_local_file(fileid, fileInfo->relative_path(), fileInfo->filename()) ){
-                                retcode_t create_file_ret = jobInfo_.localFileInfo.add_file( fileid, 
-                                        fileInfo->relative_path(), fileInfo->filename(), fileInfo->size());
-                                if( create_file_ret != ERROR_OK ){
-                                    poco_warning_f2(logger_, "Cannot add file, file id '%s', relative path : '%s'",
-                                            fileid, fileInfo->relative_path() );
-                                    poco_assert( create_file_ret != ERROR_OK );
-                                }else{
-                                    poco_debug_f1(logger_, "add file '%s' to localFileInfo succeed!", fileid);
-                                }
-                            }else{
-                                poco_debug_f1(logger_, "localFileInfo already contains file '%s'", fileid);
-                            }
+                            //we only download the same file once and copy the rest at the end of download
+                            TorrentFileInfoPtr fileInfo = jobInfo_.torrentInfo.get_one_file_of_same_fileid(fileid);
+
+                            
+                            poco_assert( true == jobInfo_.localFileInfo.has_local_file(fileid, 
+                                                                                       fileInfo->relative_path(), 
+                                                                                       fileInfo->filename())
+                                    );
+                            poco_trace_f2(logger_, "assert passed at file : %s, line : %d", string(__FILE__), __LINE__ - 1);
+                            //if( false == jobInfo_.localFileInfo.has_local_file(fileid, fileInfo->relative_path(), fileInfo->filename()) ){
+                            //    retcode_t create_file_ret = jobInfo_.localFileInfo.add_file( fileid, 
+                            //            fileInfo->relative_path(), fileInfo->filename(), fileInfo->size());
+                            //    if( create_file_ret != ERROR_OK ){
+                            //        poco_warning_f2(logger_, "Cannot add file, file id '%s', name : '%s'",
+                            //                fileid, fileInfo->relative_path() + fileInfo->filename() );
+                            //        poco_assert( create_file_ret != ERROR_OK );
+                            //    }else{
+                            //        poco_debug_f1(logger_, "add file '%s' to localFileInfo succeed!",
+                            //                fileInfo->relative_path() + fileInfo->filename());
+                            //    }
+                            //}else{
+                            //    poco_debug_f2(logger_, "localFileInfo already contains file '%s', name '%s' ", fileid, 
+                            //            fileInfo->relative_path() + fileInfo->filename());
+                            //}
 
                             FilePtr file = jobInfo_.localFileInfo.get_file(fileid);
                             try{

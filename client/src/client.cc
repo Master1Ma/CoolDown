@@ -50,9 +50,9 @@ namespace CoolDown{
                     sockManager->return_sock(clientid, *sock);
                 }
 
-                bool find_info_by_relative_path_and_name(const TorrentFileInfoPtr& info, const string& relative_path, const string& filename){
-                    return info->relative_path() == relative_path && info->filename() == filename;
-                }
+                //bool find_info_by_relative_path_and_name(const TorrentFileInfoPtr& info, const string& relative_path, const string& filename){
+                //    return info->relative_path() == relative_path && info->filename() == filename;
+                //}
             }
 
             CoolClient::CoolClient()
@@ -153,14 +153,18 @@ namespace CoolDown{
                         JobPtr pJob = this->get_job(handle);
                         poco_assert( pJob.isNull() == false );
                         set<string> same_fileid;
-                        BOOST_FOREACH(const string& fileid, pJob->JobInfo().fileidlist() ){
-                            retcode_t ret =pJob->MutableJobInfo()->localFileInfo.add_file(fileid, 
-                                    pJob->MutableJobInfo()->torrentInfo.get_file(fileid)->relative_path(),
-                                    pJob->MutableJobInfo()->torrentInfo.get_file(fileid)->filename(),
-                                    pJob->MutableJobInfo()->torrentInfo.get_file(fileid)->size()
-                                    );
+                        BOOST_FOREACH(const Torrent::File& file, torrent.file() ){
+                            string fileid( file.checksum() );
+                            string relative_path( file.relativepath() );
+                            string filename( file.filename() );
+                            Int64 filesize( file.size() );
 
-                            poco_debug_f2(logger(), "add '%s' to localFileInfo returns %d", pJob->MutableJobInfo()->torrentInfo.get_file(fileid)->filename(), (int)ret);
+                            retcode_t ret = pJob->MutableJobInfo()->localFileInfo.add_file(fileid,
+                                                                                           relative_path,
+                                                                                           filename,
+                                                                                           filesize);
+                            poco_debug_f2(logger(), "add '%s' to localFileInfo returns %d", filename, (int)ret);
+
                             if( same_fileid.find(fileid) != same_fileid.end() ){
                                 continue;
                             }else{
