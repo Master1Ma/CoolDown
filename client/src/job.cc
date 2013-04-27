@@ -266,7 +266,7 @@ namespace CoolDown{
                                 while( tp_.available() == 0 ){
                                     try{
                                         this->available_thread_cond_.wait( this->available_thread_mutex_, WAIT_TIMEOUT);
-                                        poco_notice(logger_, "wake up from wait available_thread_cond_");
+                                        poco_debug(logger_, "wake up from wait available_thread_cond_");
                                     }catch(Poco::TimeoutException& e){
                                         poco_notice(logger_, "wait available_thread_cond_ timeout.");
                                     }

@@ -1,3 +1,4 @@
-1.fix some file not downloaded in torrent bug( music.torrent ). 
-    update : this is because when download two same file, the fileid is the same, and they share too many info in the data structure.
-    to be fixed.
+1.define interface to Client GUI.
+2.add routine thread to collect JobInfo for each Job
+3.Serialize Job & Paese Job
+4.integrate with Resource-Server
