@@ -223,7 +223,8 @@ namespace CoolDown{
          torrentInfo(torrent)
         {
             fileidlist_.reserve( torrent.file().size() );
-            BOOST_FOREACH(const Torrent::File& file, torrent.file() ){
+            for(int pos = 0; pos != torrent.file().size(); ++pos){
+                const Torrent::File& file = torrent.file().Get(pos);
                 int chunk_size = file.chunk().size();
                 string fileid( file.checksum() );
                 string relative_path( file.relativepath() );

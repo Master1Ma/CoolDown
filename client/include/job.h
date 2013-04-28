@@ -42,7 +42,7 @@ namespace CoolDown{
                 void onFinished(TaskFinishedNotification* pNf);
                 void onFailed(TaskFailedNotification* pNf);
                 JobInfoPtr MutableJobInfo();
-                const JobInfo& JobInfo() const;
+                const JobInfo& ConstJobInfo() const;
 
                 static void convert_bitmap_to_transport_format(const file_bitmap_ptr& bitmap, ClientProto::FileInfo* pInfo);
                 static void conver_transport_format_bitmap(const ClientProto::FileInfo& info, file_bitmap_ptr& bitmap);

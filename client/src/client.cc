@@ -159,7 +159,8 @@ namespace CoolDown{
                         JobPtr pJob = this->get_job(handle);
                         poco_assert( pJob.isNull() == false );
                         set<string> same_fileid;
-                        BOOST_FOREACH(const Torrent::File& file, torrent.file() ){
+                        for(int pos = 0; pos != torrent.file().size(); ++pos){
+                            const Torrent::File& file = torrent.file().Get(pos);
                             string fileid( file.checksum() );
                             string relative_path( file.relativepath() );
                             string filename( file.filename() );
@@ -177,6 +178,7 @@ namespace CoolDown{
                                 same_fileid.insert(fileid);
                                 pJob->MutableJobInfo()->downloadInfo.bitmap_map[fileid]->flip();
                             }
+
                         }
 
                         poco_debug_f1(logger(), "client listen on port : %d", LOCAL_PORT);
@@ -507,7 +509,7 @@ namespace CoolDown{
 
             CoolClient::JobPtr CoolClient::get_job(const string& fileid){
                 BOOST_FOREACH(JobMap::value_type& p, jobs_){
-                    const vector<string>& fileidlist = p.second->JobInfo().fileidlist();
+                    const vector<string>& fileidlist = p.second->ConstJobInfo().fileidlist();
                     if( fileidlist.end() != find(fileidlist.begin(), fileidlist.end(), fileid) ){
                         return p.second;
                     }

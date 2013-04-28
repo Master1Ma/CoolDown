@@ -56,7 +56,7 @@ namespace CoolDown{
         JobInfoPtr Job::MutableJobInfo(){
             return this->jobInfoPtr_;
         }
-        const JobInfo& Job::JobInfo() const{
+        const JobInfo& Job::ConstJobInfo() const{
             return this->jobInfo_;
         }
 
