@@ -2,7 +2,6 @@
 #include <Poco/Util/Application.h>
 #include <Poco/Net/SocketAddress.h>
 #include <Poco/Exception.h>
-#include <boost/phoenix.hpp>
 
 using Poco::Util::Application;
 using Poco::Net::SocketAddress;
