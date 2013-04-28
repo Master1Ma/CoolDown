@@ -85,6 +85,11 @@ namespace CoolDown{
 
                     //job control
                     retcode_t add_job(const Torrent::Torrent& torrent, const string& top_path, int* internal_handle);
+                    
+                    //retcode_t AddNewDownload(const Torrent::Torrent& torrent, const string& top_path, int* handle);
+                    //retcode_t LoadDownload(const Torrent::Torrent& torrent, const Torrent::History& history, int* handle);
+                    //retcode_t SerializeDownloadHistory();
+                    //retcode_t ParseDownloadHistory();
                     retcode_t start_job(int handle);
                     retcode_t pause_download(int handle);
                     retcode_t resume_download(int handle);
@@ -127,6 +132,7 @@ namespace CoolDown{
 
                     bool init_error_;
                     string clientid_;
+                    string history_file_path_;
                     LocalSockManagerPtr sockManager_;
 
                     int job_index_;

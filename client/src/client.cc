@@ -66,10 +66,12 @@ namespace CoolDown{
                 ServerApplication::initialize(self);
 
                 setLogger(Logger::get("ConsoleLogger"));
-
                 LOCAL_PORT = (unsigned short) config().getInt("client.message_port", 9025);
-                this->init_error_ = false;
                 this->clientid_ = Verification::get_verification_code( Poco::Environment::nodeId() );
+                string default_history_file_path = format("%s%c%s", Path::current(), Path::separator, "history");
+                this->history_file_path_ = config().getString("client.history_path", default_history_file_path);
+
+                this->init_error_ = false;
                 string msg;
                 try{
                     job_index_ = 0;
