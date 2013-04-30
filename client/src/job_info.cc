@@ -210,8 +210,8 @@ namespace CoolDown{
         is_upload_paused(true),
         bytes_upload_this_second(0),
         bytes_download_this_second(0),
-        upload_speed_limit(1<<31),
-        download_speed_limit(1<<31)
+        upload_speed_limit(1<<20),
+        download_speed_limit(1<<20)
         {
         }
 
