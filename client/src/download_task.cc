@@ -82,9 +82,11 @@ namespace CoolDown{
             poco_assert( chunk_size != -1 );
             poco_debug_f2(logger_, "assert passed at file : %s, line : %d", string(__FILE__), __LINE__ - 1);
 
-            string content;
             int nRecv = 0;
+            int nLeft = chunk_size;
             poco_debug_f1(logger_, "Going to receive %d bytes.", chunk_size);
+            Buffer<char> recvBuffer(chunk_size);
+
             while( nRecv < chunk_size){
                 if( downloadInfo_.is_finished ){
                     throw Exception("Job Finished.");
@@ -98,19 +100,27 @@ namespace CoolDown{
                     poco_notice(logger_, "going to wait download_speed_limit_cond in DownloadTask::runTask");
                     downloadInfo_.download_speed_limit_cond.wait(downloadInfo_.download_speed_limit_mutex);
                 }else{
-                    Buffer<char> recvBuffer(chunk_size);
+
+                    int download_quota = downloadInfo_.download_speed_limit - downloadInfo_.bytes_download_this_second;
+                    if( download_quota <= 0){
+                        continue;
+                    }
+
                     poco_trace(logger_, "before receive contents from peer.");
-                    int n = sock_->receiveBytes(recvBuffer.begin(), recvBuffer.size() );
+
+                    int expect_bytes = download_quota > nLeft ? nLeft : download_quota;
+                    int n = sock_->receiveBytes( static_cast<char*>(recvBuffer.begin()) + nRecv, expect_bytes);
                     poco_debug_f1(logger_, "receive %d bytes from peer.", n);
                     if( n <= 0 ){
                         throw Exception("receiveBytes in DownloadTask::runTask return n <= 0");
                     }
                     downloadInfo_.bytes_download_this_second += n;
                     nRecv += n;
-                    content.append( recvBuffer.begin(), n );
+                    nLeft -= n;
                 }
                 poco_debug_f2(logger_, "expcet %d bytes, %d bytes received!", chunk_size, nRecv);
             }
+            string content(recvBuffer.begin(), recvBuffer.size());
             poco_assert(content.length() == chunk_size );
             poco_trace_f2(logger_, "assert passed at file : %s, line : %d", string(__FILE__), __LINE__ - 1);
             poco_assert(nRecv == chunk_size );
