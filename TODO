@@ -2,3 +2,8 @@
 2.add routine thread to collect JobInfo for each Job
 3.Serialize Job & Paese Job
 4.integrate with Resource-Server
+
+
+
+Bug:
+1.Cannot make a clean Exit, maybe the usae of SharedPtr<socket> problem
