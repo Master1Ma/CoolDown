@@ -100,6 +100,7 @@ namespace CoolDown{
                 string tracker_address( format("%s:%d", tracker_ip, (int)CoolClient::TRACKER_PORT) );
                 poco_debug_f1(logger(), "run application with %d", (int)args.size());
                 Thread job_info_collector_thread;
+                job_info_collector_thread.setOSPriority( Thread::getMaxOSPriority() );
                 job_info_collector_thread.start( *(new JobInfoCollector) );
 
                 //Timer info_collector_timer(0, 1000);
