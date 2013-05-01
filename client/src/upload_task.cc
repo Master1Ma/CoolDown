@@ -17,6 +17,7 @@ namespace CoolDown{
 
         UploadTask::UploadTask(DownloadInfo& downloadInfo, const FilePtr& file, UInt64 offset, int chunk_size, StreamSocket& sock)
         :Task( format("Upload task to %s", sock.peerAddress().host().toString()) ), 
+        peerAddress_(sock.peerAddress().host().toString()),
         downloadInfo_(downloadInfo),
         file_(file),
         offset_(offset),
@@ -33,7 +34,7 @@ namespace CoolDown{
             Logger& logger_ = Application::instance().logger();
             poco_trace(logger_, "enter UploadTask::runTask");
             SharedMemory sm(*file_, SharedMemory::AM_READ);
-            poco_debug_f2(logger_, "going to send %d bytes to '%s'", chunk_size_, sock_.peerAddress().toString() );
+            poco_debug_f2(logger_, "going to send %d bytes to '%s'", chunk_size_, this->peerAddress_);
             int nSend = 0;
             while( nSend < chunk_size_ ){
                 int send_this_time = sock_.sendBytes( sm.begin() + offset_, chunk_size_ );
@@ -49,7 +50,7 @@ namespace CoolDown{
                 throw Exception( format("%s, chunk_size is %d bytes but only send %d", name(), chunk_size_, nSend) );
             }
             poco_debug_f3(logger_, "UploadTask succeed, \nlocal file path : %s\n offset : %Lu\nchunk_size : %d", file_->path(), offset_, chunk_size_);
-            poco_debug_f2(logger_, "send %d bytes to '%s' succeed.", nSend, sock_.peerAddress().toString());
+            poco_debug_f2(logger_, "send %d bytes to '%s' succeed.", nSend, peerAddress_);
         }
     }
 }

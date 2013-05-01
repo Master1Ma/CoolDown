@@ -207,9 +207,9 @@ namespace CoolDown{
                             "(2)Publish File and upload : Client LocalFile TorrentFile");
                 }
 
-
-
-
+                while( job_info_collector_thread.tryJoin( 1000 ) == false ){
+                    this->jobInfoCollectorTerminateCond_.signal();
+                }
 
                 return Application::EXIT_OK;
             }
@@ -468,6 +468,7 @@ namespace CoolDown{
             retcode_t CoolClient::add_job(const Torrent::Torrent& torrent, const string& top_path, int* internal_handle){
                 SharedPtr<JobInfo> info( new JobInfo( torrent, top_path ) );
                 int this_job_index = job_index_;
+                FastMutex::ScopedLock lock(mutex_);
                 jobs_[job_index_] = JobPtr( new Job(info, *(this->sockManager_), logger()) );
                 ++job_index_;
                 *internal_handle = this_job_index;
@@ -475,16 +476,16 @@ namespace CoolDown{
             }
 
             retcode_t CoolClient::start_job(int handle){
+                FastMutex::ScopedLock lock(mutex_);
                 JobMap::iterator iter = jobs_.find(handle);
                 if( iter == jobs_.end() ){
                     return ERROR_JOB_NOT_EXISTS;
                 }
-                this->resume_download(handle);
+                this->resume_download_without_lock(handle);
                 jobThreads_.start(*(iter->second));
                 return ERROR_OK;
             }
-
-            retcode_t CoolClient::pause_download(int handle){
+            retcode_t CoolClient::pause_download_without_lock(int handle){
                 JobMap::iterator iter = jobs_.find(handle);
                 if( iter == jobs_.end() ){
                     return ERROR_JOB_NOT_EXISTS;
@@ -493,7 +494,17 @@ namespace CoolDown{
                 return ERROR_OK;
             }
 
+            retcode_t CoolClient::pause_download(int handle){
+                FastMutex::ScopedLock lock(mutex_);
+                return this->pause_download_without_lock(handle);
+            }
+
             retcode_t CoolClient::resume_download(int handle){
+                FastMutex::ScopedLock lock(mutex_);
+                return this->resume_download_without_lock(handle);
+            }
+
+            retcode_t CoolClient::resume_download_without_lock(int handle){
                 JobMap::iterator iter = jobs_.find(handle);
                 if( iter == jobs_.end() ){
                     return ERROR_JOB_NOT_EXISTS;
@@ -503,6 +514,7 @@ namespace CoolDown{
             }
 
             CoolClient::JobPtr CoolClient::get_job(int handle){
+                FastMutex::ScopedLock lock(mutex_);
                 if( jobs_.find(handle) == jobs_.end() ){
                     return JobPtr();
                 }else{
@@ -511,6 +523,7 @@ namespace CoolDown{
             }
 
             CoolClient::JobPtr CoolClient::get_job(const string& fileid){
+                FastMutex::ScopedLock lock(mutex_);
                 BOOST_FOREACH(JobMap::value_type& p, jobs_){
                     const vector<string>& fileidlist = p.second->ConstJobInfo().fileidlist();
                     if( fileidlist.end() != find(fileidlist.begin(), fileidlist.end(), fileid) ){
@@ -521,6 +534,7 @@ namespace CoolDown{
             }
 
             void CoolClient::onJobInfoCollectorWakeUp(Timer& timer){
+                FastMutex::ScopedLock lock(mutex_);
                 BOOST_FOREACH(JobMap::value_type& p, jobs_){
                     int handle = p.first;
                     JobInfoPtr pInfo = p.second->MutableJobInfo();

@@ -39,7 +39,7 @@ namespace CoolDown{
                 }
 
                 string peer_address() const{
-                    return sock_.peerAddress().toString();
+                    return this->peerAddress_;
                 }
 
                 string file_path() const{
@@ -51,6 +51,7 @@ namespace CoolDown{
                 }
 
             private:
+                string peerAddress_;
                 DownloadInfo& downloadInfo_;
                 FilePtr file_;
                 UInt64 offset_;

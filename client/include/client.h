@@ -16,6 +16,7 @@
 #include <Poco/ThreadPool.h>
 #include <Poco/Timer.h>
 #include <Poco/Condition.h>
+#include <Poco/Mutex.h>
 #include <google/protobuf/message.h>
 using google::protobuf::Message;
 
@@ -34,6 +35,7 @@ using Poco::ThreadPool;
 using Poco::Timer;
 using Poco::TimerCallback;
 using Poco::Condition;
+using Poco::FastMutex;
 
 namespace Torrent{
     class Torrent;
@@ -128,6 +130,10 @@ namespace CoolDown{
 
                     void list_dir_recursive(const File& file, FileList* pList);
 
+                    //no lock job ops
+                    retcode_t pause_download_without_lock(int handle);
+                    retcode_t resume_download_without_lock(int handle);
+
                     int LOCAL_PORT;
 
                     bool init_error_;
@@ -137,6 +143,9 @@ namespace CoolDown{
 
                     int job_index_;
                     typedef map<int, JobPtr> JobMap;
+                    FastMutex mutex_;
+
+                    //guard by mutex_;
                     JobMap jobs_;
                     ThreadPool jobThreads_;
 

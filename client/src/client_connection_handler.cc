@@ -30,7 +30,7 @@ namespace CoolDown{
 
         }
 
-        ClientConnectionHandler::~ClientConnectionHandler(){
+            ClientConnectionHandler::~ClientConnectionHandler(){
             poco_information_f1(logger_, "Disconnect from %s", peerAddress_);
             reactor_.removeEventHandler(sock_, 
                                 NObserver<ClientConnectionHandler, ReadableNotification>(*this, &ClientConnectionHandler::onReadable));
@@ -144,14 +144,22 @@ err:
             }
 
             poco_trace(logger_, "in HandleUploadRequest, get job succeed!");
+            poco_trace_f2(logger_, "at %s : %d", string(__FILE__), __LINE__ );
             SharedPtr<File> file = pJob->MutableJobInfo()->localFileInfo.get_file(fileid);
+            poco_trace_f2(logger_, "at %s : %d", string(__FILE__), __LINE__ );
             UInt64 offset =  pJob->MutableJobInfo()->torrentInfo.get_one_file_of_same_fileid(fileid)->chunk_offset(chunk_pos);
+            poco_trace_f2(logger_, "at %s : %d", string(__FILE__), __LINE__ );
             int chunk_size = pJob->MutableJobInfo()->torrentInfo.get_one_file_of_same_fileid(fileid)->chunk_size(chunk_pos);
+            poco_trace_f2(logger_, "at %s : %d", string(__FILE__), __LINE__ );
 
             poco_assert( file.isNull() == false );
+            poco_trace_f2(logger_, "at %s : %d", string(__FILE__), __LINE__ );
             poco_assert( chunk_size > 0 );
+            poco_trace_f2(logger_, "at %s : %d", string(__FILE__), __LINE__ );
             pTask = new UploadTask(pJob->MutableJobInfo()->downloadInfo, file, offset, chunk_size, this->sock_);
+            poco_trace_f2(logger_, "at %s : %d", string(__FILE__), __LINE__ );
             reply->set_returncode(ERROR_OK);
+            poco_trace_f2(logger_, "at %s : %d", string(__FILE__), __LINE__ );
             return ERROR_OK;
         }
 
