@@ -109,6 +109,7 @@ namespace CoolDown{
                 const TorrentFileInfoPtr& get_one_file_of_same_fileid(const string& fileid);
                 const TorrentFileInfoPtr& get_file(const string& fileid, const string& relative_path, const string& filename);
                 string tracker_address() const;
+                string torrentid() const;
 
             private:
                 Torrent::Torrent torrent_;

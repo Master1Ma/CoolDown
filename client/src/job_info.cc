@@ -217,6 +217,10 @@ namespace CoolDown{
             return torrent_.trackeraddress();
         }
 
+        string TorrentInfo::torrentid() const{
+            return torrent_.torrentid();
+        }
+
         //DownloadInfo
         DownloadInfo::DownloadInfo()
         :is_finished(false),

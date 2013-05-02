@@ -530,10 +530,11 @@ namespace CoolDown{
             }
 
             bool CoolClient::has_this_torrent(const string& torrent_id){
-                return torrent_ids_.find( torrent_id ) != torrent_ids_.find( torrent_id );
+                return torrent_ids_.end() != torrent_ids_.find( torrent_id );
             }
 
             void CoolClient::register_torrent(const string& torrent_id){
+                poco_debug_f1(logger(),"register torrent_id : %s", torrent_id);
                 this->torrent_ids_.insert( torrent_id );
             }
 
@@ -629,14 +630,8 @@ namespace CoolDown{
                     pBitmap->resize( oneFile.filebitcount() );
                     info->downloadInfo.percentage_map[ oneFile.fileid() ] = pBitmap->count() / pBitmap->size();
                 }
-
-                int this_job_index = job_index_;
-                FastMutex::ScopedLock lock(mutex_);
-                
-                jobs_[job_index_] = JobPtr( new Job(info, *(this->sockManager_), logger()) );
-                torrent_path_map_[this_job_index] = history.torrentpath();
-                ++job_index_;
-                return ERROR_OK;
+                int handle;
+                return this->AddNewJob(info, history.torrentpath(), &handle);
             }
 
             retcode_t CoolClient::AddNewJob(const SharedPtr<JobInfo>& info, const string& torrent_path, int* handle){
@@ -644,6 +639,7 @@ namespace CoolDown{
                 
                 FastMutex::ScopedLock lock(mutex_);
                 jobs_[job_index_] = JobPtr( new Job(info, *(this->sockManager_), logger()) );
+                poco_debug_f1(logger(), "add Job to jobs_, torrent_id : %s", info->torrentInfo.torrentid());
                 ++job_index_;
                 *handle = this_job_index;
                 torrent_path_map_[this_job_index] = torrent_path;
@@ -657,6 +653,7 @@ namespace CoolDown{
                 if( this->has_this_torrent(torrent_id) ){
                     return ERROR_JOB_EXISTS;
                 }
+                poco_debug_f1(logger(), "in  AddNewDownloadJob, pass unique check of torrent_id : %s", torrent_id);
                 this->register_torrent( torrent_id );
 
                 SharedPtr<JobInfo> info( new JobInfo( torrent, top_path, needs) );
@@ -666,9 +663,12 @@ namespace CoolDown{
             retcode_t CoolClient::AddNewUploadJob(const string& torrent_path, const string& top_path, 
                     const Torrent::Torrent& torrent, int* handle){
 
-                if( this->has_this_torrent( torrent.torrentid() ) ){
+                string torrent_id( torrent.torrentid() );
+                if( this->has_this_torrent(torrent_id) ){
                     return ERROR_JOB_EXISTS;
                 }
+                poco_debug_f1(logger(), "in  AddNewUploadJob, pass unique check of torrent_id : %s", torrent_id);
+                this->register_torrent( torrent_id );
 
                 FileIdentityInfoList needs;
                 for(int i = 0; i != torrent.file().size(); ++i){
