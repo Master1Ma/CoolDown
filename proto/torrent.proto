@@ -14,11 +14,12 @@ message File{
 };
 
 message Torrent{
-    required int32 Type = 1;
-    required int64 TotalSize = 2;
-    required string CreateBy = 3;
-    required string CreateTime = 4;
-    required string TrackerAddress = 5;
-    repeated File File = 6;
-    optional string Introduction = 7;
+    required string TorrentId = 1;
+    required int32 Type = 2;
+    required int64 TotalSize = 3;
+    required string CreateBy = 4;
+    required string CreateTime = 5;
+    required string TrackerAddress = 6;
+    repeated File File = 7;
+    optional string Introduction = 8;
 };

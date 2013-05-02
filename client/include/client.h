@@ -6,6 +6,7 @@
 #include "net_task_manager.h"
 #include "job_info.h"
 #include <vector>
+#include <set>
 #include <string>
 #include <boost/shared_ptr.hpp>
 #include <Poco/Util/Application.h>
@@ -21,6 +22,7 @@
 using google::protobuf::Message;
 
 using std::vector;
+using std::set;
 using std::string;
 using boost::shared_ptr;
 using Poco::Util::Application;
@@ -95,16 +97,23 @@ namespace CoolDown{
                     retcode_t SaveJobHistory(const string& filename);
                     retcode_t ReloadJobHistory(const string& filename);
                     retcode_t ReloadOneJob(const Torrent::Torrent& torrent, const JobHistory::JobHistoryInfo& history);
-                    retcode_t AddNewJob(const string& torrent_path, const Torrent::Torrent& torrent, 
+
+                    retcode_t AddNewDownloadJob(const string& torrent_path, const Torrent::Torrent& torrent,
                             const FileIdentityInfoList& needs, const string& top_path, int* handle);
-                    //retcode_t LoadDownload(const Torrent::Torrent& torrent, const Torrent::History& history, int* handle);
-                    //retcode_t SerializeDownloadHistory();
-                    //retcode_t ParseDownloadHistory();
+
+                    retcode_t AddNewUploadJob(const string& torrent_path, const string& top_path, 
+                            const Torrent::Torrent& torrent, int* handle);
+
+                    retcode_t AddNewJob(const SharedPtr<JobInfo>& info, const string& torrent_path, int* handle);
+
                     retcode_t start_job(int handle);
                     retcode_t pause_download(int handle);
                     retcode_t resume_download(int handle);
                     JobPtr get_job(int handle);
                     JobPtr get_job(const string& fileid);
+
+                    bool has_this_torrent(const string& torrent_id);
+                    void register_torrent(const string& torrent_id);
 
                     //collect Job runtime info
                     void onJobInfoCollectorWakeUp(Timer& timer);
@@ -152,6 +161,7 @@ namespace CoolDown{
                     int job_index_;
                     typedef map<int,string> torrent_path_map_t;
                     torrent_path_map_t torrent_path_map_;
+                    set<string> torrent_ids_;
 
                     typedef map<int, JobPtr> JobMap;
                     //guard by mutex_;

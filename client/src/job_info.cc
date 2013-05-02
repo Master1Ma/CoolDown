@@ -50,6 +50,8 @@ namespace CoolDown{
             FastMutex::ScopedLock lock(mutex_);
             Logger& logger_ = Application::instance().logger();
             try{
+                poco_debug_f4(logger_, "Call add_file with fileid '%s', relative_path : '%s', filename : '%s', filesize : '%Ld'",
+                        fileid, relative_path, filename, filesize);
                 //make sure we don't add a file twice
                 //map<string, FilePtr>::iterator iter = files.find(fileid);
                 //a torrent may contain the same file servral times, so this assert is wrong.
@@ -68,7 +70,7 @@ namespace CoolDown{
                 dir.createDirectories();
 
                 files[fileid] = FilePtr( new File(filepath) );
-                poco_debug_f1(logger_, "filepath : %s", filepath);
+                poco_debug_f1(logger_, "in LocalFileInfo::add_file, filepath : %s", filepath);
 
                 if( files[fileid]->exists() == false ){
                     bool create_file = files[fileid]->createFile();
@@ -79,10 +81,9 @@ namespace CoolDown{
                         //we have that file in our disk, so don't truncate that file.
                     }
 
-                    poco_debug_f1(logger_, "createDirectory returns %d", (int)create_file);
                 }else{
-                    poco_debug_f3(logger_, "file already exists, fileid '%s', relative_path '%s', filename '%s'",
-                            fileid, relative_path, filename);
+                    //poco_debug_f3(logger_, "file already exists, fileid '%s', relative_path '%s', filename '%s'",
+                    //        fileid, relative_path, filename);
                 }
             }catch(Exception& e){
                 Application::instance().logger().warning( Poco::format("Got exception while LocalFileInfo::add_file, fileid '%s'"

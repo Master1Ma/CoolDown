@@ -1,5 +1,6 @@
 #include "upload_task.h"
 #include "job_info.h"
+#include "verification.h"
 #include <Poco/Logger.h>
 #include <Poco/Util/Application.h>
 #include <Poco/SharedMemory.h>
@@ -33,11 +34,16 @@ namespace CoolDown{
         void UploadTask::runTask(){
             Logger& logger_ = Application::instance().logger();
             poco_trace(logger_, "enter UploadTask::runTask");
-            SharedMemory sm(*file_, SharedMemory::AM_READ);
+            string content;
+            {
+                SharedMemory sm(*file_, SharedMemory::AM_READ);
+                content = string( sm.begin() + offset_, chunk_size_ );
+            }
+            poco_assert( content.size() == chunk_size_ );
             poco_debug_f2(logger_, "going to send %d bytes to '%s'", chunk_size_, this->peerAddress_);
             int nSend = 0;
             while( nSend < chunk_size_ ){
-                int send_this_time = sock_.sendBytes( sm.begin() + offset_, chunk_size_ );
+                int send_this_time = sock_.sendBytes( content.data() + nSend , chunk_size_ - nSend);
                 poco_debug_f2( logger_, "in upload task, send %d bytes this time, %d bytes to send.", send_this_time, chunk_size_ - send_this_time );
                 if( send_this_time <= 0 ){
                     poco_warning_f1(logger_, "bytes send this time is %d", send_this_time );
@@ -49,7 +55,9 @@ namespace CoolDown{
             if( nSend != chunk_size_ ){
                 throw Exception( format("%s, chunk_size is %d bytes but only send %d", name(), chunk_size_, nSend) );
             }
-            poco_debug_f3(logger_, "UploadTask succeed, \nlocal file path : %s\n offset : %Lu\nchunk_size : %d", file_->path(), offset_, chunk_size_);
+
+            string vc = Verification::get_verification_code(content);
+            poco_debug_f4(logger_, "UploadTask succeed, \nlocal file path : %s\n offset : %Lu\nchunk_size : %d\nvc : %s", file_->path(), offset_, chunk_size_, vc);
             poco_debug_f2(logger_, "send %d bytes to '%s' succeed.", nSend, peerAddress_);
         }
     }

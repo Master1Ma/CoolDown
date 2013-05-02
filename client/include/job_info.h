@@ -167,14 +167,19 @@ namespace CoolDown{
             atomic_uint64_t download_total;
 
             Condition download_speed_limit_cond;
-            FastMutex download_speed_limit_mutex;
+
+            Condition upload_speed_limit_cond;
 
             Condition download_pause_cond;
             FastMutex download_pause_mutex;
 
-            map<string, int> percentage_map;
+            typedef map<string, int> percentage_map_t;
+            typedef map<string, file_bitmap_ptr> file_bitmap_map_t;
+
+            percentage_map_t percentage_map;
+            file_bitmap_map_t bitmap_map;
+
             int max_parallel_task;
-            map<string, file_bitmap_ptr> bitmap_map;
 
         };
 

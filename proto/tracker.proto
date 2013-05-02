@@ -33,6 +33,8 @@ message Login{
 
 message Logout{
     required string ClientId = 1;
+    //required int64 UploadTotal = 2;
+    //required int64 DownloadTotal = 3;
 }
 
 

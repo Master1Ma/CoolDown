@@ -98,7 +98,8 @@ namespace CoolDown{
                 }
                 if( downloadInfo_.bytes_download_this_second > downloadInfo_.download_speed_limit ){
                     poco_notice(logger_, "going to wait download_speed_limit_cond in DownloadTask::runTask");
-                    downloadInfo_.download_speed_limit_cond.wait(downloadInfo_.download_speed_limit_mutex);
+                    FastMutex mutex;
+                    downloadInfo_.download_speed_limit_cond.wait(mutex);
                 }else{
 
                     int download_quota = downloadInfo_.download_speed_limit - downloadInfo_.bytes_download_this_second;
@@ -129,7 +130,8 @@ namespace CoolDown{
             string content_check_sum( Verification::get_verification_code(content) );
 
             if( content_check_sum != check_sum_){
-                throw Exception(format("verify failed, original : %s, download_checksum : %s", check_sum_, content_check_sum));
+                throw Exception(format("verify failed, file : %s, offset : %Ld, original : %s, download_checksum : %s", 
+                            file_.path(), fileInfo_.chunk_offset(chunk_pos_), check_sum_, content_check_sum));
             }
 
             SharedMemory sm(file_, SharedMemory::AM_WRITE);
