@@ -53,7 +53,6 @@ namespace CoolDown{
                 goto err;
             }
 
-
             this->Process(in, &out);
             poco_trace(logger_, "After Process in ClientConnectionHandler::onReadable.");
             ret = out.sendBy( sock_ );
@@ -140,26 +139,20 @@ err:
             int chunk_pos = req->chunknumber();
             CoolClient::JobPtr pJob = app_.get_job(fileid);
             if( pJob.isNull() ){
+                poco_debug_f1(logger_, "We donot own this file '%s'", fileid);
                 return ERROR_FILE_NOT_EXISTS;
             }
 
             poco_trace(logger_, "in HandleUploadRequest, get job succeed!");
-            poco_trace_f2(logger_, "at %s : %d", string(__FILE__), __LINE__ );
             SharedPtr<File> file = pJob->MutableJobInfo()->localFileInfo.get_file(fileid);
-            poco_trace_f2(logger_, "at %s : %d", string(__FILE__), __LINE__ );
             UInt64 offset =  pJob->MutableJobInfo()->torrentInfo.get_one_file_of_same_fileid(fileid)->chunk_offset(chunk_pos);
-            poco_trace_f2(logger_, "at %s : %d", string(__FILE__), __LINE__ );
             int chunk_size = pJob->MutableJobInfo()->torrentInfo.get_one_file_of_same_fileid(fileid)->chunk_size(chunk_pos);
-            poco_trace_f2(logger_, "at %s : %d", string(__FILE__), __LINE__ );
 
             poco_assert( file.isNull() == false );
-            poco_trace_f2(logger_, "at %s : %d", string(__FILE__), __LINE__ );
             poco_assert( chunk_size > 0 );
-            poco_trace_f2(logger_, "at %s : %d", string(__FILE__), __LINE__ );
             pTask = new UploadTask(pJob->MutableJobInfo()->downloadInfo, file, offset, chunk_size, this->sock_);
-            poco_trace_f2(logger_, "at %s : %d", string(__FILE__), __LINE__ );
+            poco_debug_f1(logger_, "Add new UploadTask for file '%s'", fileid);
             reply->set_returncode(ERROR_OK);
-            poco_trace_f2(logger_, "at %s : %d", string(__FILE__), __LINE__ );
             return ERROR_OK;
         }
 
@@ -187,6 +180,7 @@ err:
                 pInfo->set_filebitcount(0);
 
             }else{
+                poco_debug_f1(logger_, "in ShakeHand, we have this file : '%s'", fileid);
                 pInfo->set_hasfile(1);
                 pInfo->set_percentage( pJob->MutableJobInfo()->downloadInfo.percentage_map[fileid] );
                 Job::convert_bitmap_to_transport_format(pJob->MutableJobInfo()->downloadInfo.bitmap_map[fileid], pInfo);

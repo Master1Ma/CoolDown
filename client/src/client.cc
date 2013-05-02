@@ -2,12 +2,13 @@
 #include "job.h"
 #include "payload_type.h"
 #include "netpack.h"
-#include "tracker.pb.h"
-#include "torrent.pb.h"
 #include "verification.h"
-#include "client.pb.h"
 #include "client_connection_handler.h"
 #include "job_info_collector.h"
+#include "tracker.pb.h"
+#include "torrent.pb.h"
+#include "client.pb.h"
+#include "job_history.pb.h"
 
 #include <set>
 #include <algorithm>
@@ -42,6 +43,7 @@ using Poco::Net::SocketAcceptor;
 using Poco::Thread;
 using namespace TrackerProto;
 using namespace ClientProto;
+using namespace JobHistory;
 
 namespace CoolDown{
     namespace Client{
@@ -103,23 +105,30 @@ namespace CoolDown{
                 job_info_collector_thread.setOSPriority( Thread::getMaxOSPriority() );
                 job_info_collector_thread.start( *(new JobInfoCollector) );
 
-                //Timer info_collector_timer(0, 1000);
-                //info_collector_timer.start(TimerCallback<CoolClient>(*this, &CoolClient::onJobInfoCollectorWakeUp));
-
                 if( args.size() == 1 ){
-
+                    string history_file = "/tmp/download.history";
                     this->clientid_ = "0123456789012345678901234567890123456789";
                     if( ERROR_OK != this->login_tracker(tracker_ip, CoolClient::TRACKER_PORT) ){
                         poco_warning_f1(logger(), "cannot login tracker : %s", tracker_address);
                     }
 
+                    this->ReloadJobHistory(history_file);
+
                     int handle = -1;
                     Torrent::Torrent torrent;
-                    retcode_t ret = this->parse_torrent( args[0], &torrent );
-                    poco_debug_f1(logger(), "parse_torrent retcode : %d", (int)ret);
+                    retcode_t ret = this->parse_torrent(args[0], &torrent);
+                    if( ret != ERROR_OK ){
+                        return ret;
+                    }
 
-                    ret = this->add_job(torrent, "/tmp/", &handle);
-                    poco_debug_f1(logger(), "add_job retcode : %d", (int)ret);
+                    FileIdentityInfoList needs;
+                    for(int i = 0; i != torrent.file().size(); ++i){
+                        const Torrent::File& file = torrent.file().Get(i);
+                        needs.push_back(FileIdentityInfoList::value_type(file.relativepath(), file.filename()) );
+                    }
+
+                    ret = this->AddNewJob( args[0], torrent, needs, "/tmp/", &handle);
+                    poco_debug_f1(logger(), "AddNewJob retcode : %d", (int)ret);
                     if( ret != ERROR_OK ){
                     }else{
                         ret = this->start_job(handle);
@@ -131,76 +140,81 @@ namespace CoolDown{
                         }
                     }
                     this->logout_tracker(tracker_ip, TRACKER_PORT);
+                    this->SaveJobHistory( history_file );
 
-                }else if( args.size() == 2 ){
+                }else if( args.size() == 0 ){
                     LOCAL_PORT = 9024;
+                    string history_file = "/tmp/upload.history";
                     if( ERROR_OK != this->login_tracker(tracker_ip, CoolClient::TRACKER_PORT) ){
                         poco_warning_f1(logger(), "cannot login tracker : %s", tracker_address);
                     }
+                    retcode_t ret = this->ReloadJobHistory(history_file);
+                    poco_debug_f1(logger(), "ReloadJobHistory return : %d", (int)ret);
 
-                    retcode_t ret = this->make_torrent(args[0], args[1],
-                            1 << 20, 0, tracker_address);
-                    poco_debug_f1(logger(), "make_torrent retcode : %d", (int)ret);
+                    //retcode_t ret = this->make_torrent(args[0], args[1],
+                    //        1 << 20, 0, tracker_address);
+                    //poco_debug_f1(logger(), "make_torrent retcode : %d", (int)ret);
 
-                    if( ret != ERROR_OK){
-                        return Application::EXIT_TEMPFAIL;
-                    }else{
-                        Torrent::Torrent torrent;
-                        retcode_t ret = this->parse_torrent( args[1], &torrent );
-                        poco_debug_f1(logger(), "parse_torrent retcode : %d", (int)ret);
+                    //if( ret != ERROR_OK){
+                    //    return Application::EXIT_TEMPFAIL;
+                    //}else{
+                    //    Torrent::Torrent torrent;
+                    //    retcode_t ret = this->parse_torrent( args[1], &torrent );
+                    //    poco_debug_f1(logger(), "parse_torrent retcode : %d", (int)ret);
 
-                        for(int i = 0; i != torrent.file().size(); ++i){
-                            string fileid( torrent.file().Get(i).checksum() );
-                            retcode_t publish_ret = this->publish_resource_to_tracker(tracker_address, fileid );
-                            poco_debug_f2(logger(), "publish resource '%s' return code %d.", fileid, (int)publish_ret);
-                        }
+                    //    for(int i = 0; i != torrent.file().size(); ++i){
+                    //        string fileid( torrent.file().Get(i).checksum() );
+                    //        retcode_t publish_ret = this->publish_resource_to_tracker(tracker_address, fileid );
+                    //        poco_debug_f2(logger(), "publish resource '%s' return code %d.", fileid, (int)publish_ret);
+                    //    }
 
-                        int handle = -1;
+                    //    int handle = -1;
 
-                        ret = this->add_job(torrent, "/", &handle);
-                        poco_debug_f1(logger(), "add_job retcode : %d", (int)ret);
-                        JobPtr pJob = this->get_job(handle);
-                        poco_assert( pJob.isNull() == false );
-                        set<string> same_fileid;
-                        for(int pos = 0; pos != torrent.file().size(); ++pos){
-                            const Torrent::File& file = torrent.file().Get(pos);
-                            string fileid( file.checksum() );
-                            string relative_path( file.relativepath() );
-                            string filename( file.filename() );
-                            Int64 filesize( file.size() );
+                    //    ret = this->add_job(torrent, "/", &handle);
+                    //    poco_debug_f1(logger(), "add_job retcode : %d", (int)ret);
+                    //    torrent_path_map_[handle] = args[1];
+                    //    JobPtr pJob = this->get_job(handle);
+                    //    poco_assert( pJob.isNull() == false );
+                    //    set<string> same_fileid;
+                    //    for(int pos = 0; pos != torrent.file().size(); ++pos){
+                    //        const Torrent::File& file = torrent.file().Get(pos);
+                    //        string fileid( file.checksum() );
+                    //        string relative_path( file.relativepath() );
+                    //        string filename( file.filename() );
+                    //        Int64 filesize( file.size() );
 
-                            retcode_t ret = pJob->MutableJobInfo()->localFileInfo.add_file(fileid,
-                                                                                           relative_path,
-                                                                                           filename,
-                                                                                           filesize);
-                            poco_debug_f2(logger(), "add '%s' to localFileInfo returns %d", filename, (int)ret);
+                    //        retcode_t ret = pJob->MutableJobInfo()->localFileInfo.add_file(fileid,
+                    //                                                                       relative_path,
+                    //                                                                       filename,
+                    //                                                                       filesize);
+                    //        poco_debug_f2(logger(), "add '%s' to localFileInfo returns %d", filename, (int)ret);
 
-                            if( same_fileid.find(fileid) != same_fileid.end() ){
-                                continue;
-                            }else{
-                                same_fileid.insert(fileid);
-                                pJob->MutableJobInfo()->downloadInfo.bitmap_map[fileid]->flip();
-                            }
+                    //        if( same_fileid.find(fileid) != same_fileid.end() ){
+                    //            continue;
+                    //        }else{
+                    //            same_fileid.insert(fileid);
+                    //            pJob->MutableJobInfo()->downloadInfo.bitmap_map[fileid]->flip();
+                    //        }
 
-                        }
+                    //    }
 
-                        poco_debug_f1(logger(), "client listen on port : %d", LOCAL_PORT);
-                        ServerSocket svs(LOCAL_PORT);
-                        svs.setReusePort(false);
+                    poco_debug_f1(logger(), "client listen on port : %d", LOCAL_PORT);
+                    ServerSocket svs(LOCAL_PORT);
+                    svs.setReusePort(false);
 
-                        SocketReactor reactor;
-                        SocketAcceptor<ClientConnectionHandler> acceptor(svs, reactor);
+                    SocketReactor reactor;
+                    SocketAcceptor<ClientConnectionHandler> acceptor(svs, reactor);
 
 
-                        Thread thread;
-                        thread.start(reactor);
+                    Thread thread;
+                    thread.start(reactor);
 
-                        waitForTerminationRequest();
+                    waitForTerminationRequest();
 
-                        reactor.stop();
-                        thread.join();
-                        this->logout_tracker(tracker_ip, TRACKER_PORT);
-                    }
+                    reactor.stop();
+                    thread.join();
+                    this->logout_tracker(tracker_ip, TRACKER_PORT);
+                    this->SaveJobHistory(history_file);
                 }else{
                     poco_notice(logger(), "Usage : \n"
                             "(1)Download File : Client TorrentFile\n" 
@@ -466,7 +480,12 @@ namespace CoolDown{
             }
 
             retcode_t CoolClient::add_job(const Torrent::Torrent& torrent, const string& top_path, int* internal_handle){
-                SharedPtr<JobInfo> info( new JobInfo( torrent, top_path ) );
+                FileIdentityInfoList needs;
+                for(int i = 0; i != torrent.file().size(); ++i){
+                    const Torrent::File& file = torrent.file().Get(i);
+                    needs.push_back(FileIdentityInfoList::value_type(file.relativepath(), file.filename()) );
+                }
+                SharedPtr<JobInfo> info( new JobInfo( torrent, top_path, needs ) );
                 int this_job_index = job_index_;
                 FastMutex::ScopedLock lock(mutex_);
                 jobs_[job_index_] = JobPtr( new Job(info, *(this->sockManager_), logger()) );
@@ -531,6 +550,117 @@ namespace CoolDown{
                     }
                 }
                 return JobPtr(NULL);
+            }
+
+            retcode_t CoolClient::SaveJobHistory(const string& filename){
+                ofstream ofs(filename.c_str());
+                if( !ofs ){
+                    poco_warning_f1(logger(), "Cannot open history file : %s for write.", filename);
+                    return ERROR_FILE_NOT_EXISTS;
+                }
+
+                JobHistory::History history;
+                FastMutex::ScopedLock lock(mutex_);
+
+                BOOST_FOREACH(JobMap::value_type& p, jobs_){
+                    int handle = p.first;
+                    JobPtr pJob = p.second;
+                    torrent_path_map_t::iterator iter = torrent_path_map_.find(handle);
+                    poco_assert( iter != torrent_path_map_.end() );
+                    string torrent_path( iter->second );
+                    string top_path( pJob->MutableJobInfo()->localFileInfo.top_path() );
+
+                    JobHistory::JobHistoryInfo* oneJob = history.add_jobinfo();
+                    oneJob->set_torrentpath( torrent_path );
+                    oneJob->set_localtoppath( top_path );
+
+                    const TorrentInfo::file_map_t& file_map = pJob->MutableJobInfo()->torrentInfo.get_file_map();
+                    BOOST_FOREACH(const TorrentInfo::file_map_t::value_type& p, file_map){
+                        string fileid( p.first );
+                        file_bitmap_ptr pBitmap = pJob->MutableJobInfo()->downloadInfo.bitmap_map[fileid];
+
+                        BOOST_FOREACH(const TorrentFileInfoPtr& file_info_ptr, p.second){
+                            JobHistory::FileInfo* oneFile = oneJob->add_file();
+                            oneFile->set_fileid( fileid );
+                            oneFile->set_relativepath( file_info_ptr->relative_path() );
+                            oneFile->set_filename( file_info_ptr->filename() );
+                            oneFile->set_filebitcount( pBitmap->size() );
+                            to_block_range( *pBitmap, google::protobuf::RepeatedFieldBackInserter(oneFile->mutable_filebit()) );
+                        }
+                    }
+                }
+
+                if( false == history.SerializeToOstream(&ofs) ){
+                    poco_warning_f1(logger(), "Cannot save job history to file : %s", filename);
+                    return ERROR_PROTO_SERIALIZE_ERROR;
+                }
+                return ERROR_OK;
+            }
+
+            retcode_t CoolClient::ReloadJobHistory(const string& filename){
+                ifstream ifs(filename.c_str());
+                if( !ifs ){
+                    poco_warning_f1(logger(), "Cannot load job history file : %s", filename);
+                    return ERROR_FILE_NOT_EXISTS;
+                }
+                JobHistory::History history;
+                if ( false == history.ParseFromIstream(&ifs) ){
+                    poco_warning_f1(logger(), "Cannot parse JobHistoryInfo from %s", filename);
+                    return ERROR_PROTO_PARSE_ERROR;
+                }
+
+                for(int i = 0; i != history.jobinfo().size(); ++i){
+                    const JobHistoryInfo& oneHistory = history.jobinfo().Get(i);
+                    Torrent::Torrent torrent;
+                    if( ERROR_OK != this->parse_torrent(oneHistory.torrentpath(), &torrent) ){
+                        continue;
+                    }
+                    if( ERROR_OK != this->ReloadOneJob(torrent, oneHistory) ){
+                        poco_warning(logger(), "Error while reload one job in ReloadHistoryDownload.");
+                        continue;
+                    }
+                }
+                return ERROR_OK;
+            }
+
+            retcode_t CoolClient::ReloadOneJob(const Torrent::Torrent& torrent, const JobHistoryInfo& history){
+                FileIdentityInfoList needs;
+                for(int i = 0; i != history.file().size(); ++i){
+                    const JobHistory::FileInfo& oneFile = history.file().Get(i);
+                    needs.push_back( FileIdentityInfoList::value_type(oneFile.relativepath(), oneFile.filename()) );
+                }
+
+                SharedPtr<JobInfo> info( new JobInfo( torrent, history.localtoppath(), needs) );
+                for(int i = 0; i != history.file().size(); ++i){
+                    const JobHistory::FileInfo& oneFile = history.file().Get(i);
+                    file_bitmap_ptr pBitmap = info->downloadInfo.bitmap_map[ oneFile.fileid() ];
+                    pBitmap.assign( new file_bitmap_t( oneFile.filebit().begin(), oneFile.filebit().end() ) );
+                    pBitmap->resize( oneFile.filebitcount() );
+                    info->downloadInfo.percentage_map[ oneFile.fileid() ] = pBitmap->count() / pBitmap->size();
+                }
+
+                int this_job_index = job_index_;
+                FastMutex::ScopedLock lock(mutex_);
+                
+                jobs_[job_index_] = JobPtr( new Job(info, *(this->sockManager_), logger()) );
+                torrent_path_map_[this_job_index] = history.torrentpath();
+                ++job_index_;
+                return ERROR_OK;
+            }
+
+            retcode_t CoolClient::AddNewJob(const string& torrent_path, const Torrent::Torrent& torrent, 
+                    const FileIdentityInfoList& needs, const string& top_path, int* handle){
+
+
+                SharedPtr<JobInfo> info( new JobInfo( torrent, top_path, needs) );
+                int this_job_index = job_index_;
+                FastMutex::ScopedLock lock(mutex_);
+                
+                jobs_[job_index_] = JobPtr( new Job(info, *(this->sockManager_), logger()) );
+                ++job_index_;
+                *handle = this_job_index;
+                torrent_path_map_[this_job_index] = torrent_path;
+                return ERROR_OK;
             }
 
             void CoolClient::onJobInfoCollectorWakeUp(Timer& timer){

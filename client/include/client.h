@@ -45,6 +45,10 @@ namespace ClientProto{
     class ShakeHand;
 }
 
+namespace JobHistory{
+    class JobHistoryInfo;
+};
+
 namespace CoolDown{
     namespace Client{
 
@@ -88,7 +92,11 @@ namespace CoolDown{
                     //job control
                     retcode_t add_job(const Torrent::Torrent& torrent, const string& top_path, int* internal_handle);
                     
-                    //retcode_t AddNewDownload(const Torrent::Torrent& torrent, const string& top_path, int* handle);
+                    retcode_t SaveJobHistory(const string& filename);
+                    retcode_t ReloadJobHistory(const string& filename);
+                    retcode_t ReloadOneJob(const Torrent::Torrent& torrent, const JobHistory::JobHistoryInfo& history);
+                    retcode_t AddNewJob(const string& torrent_path, const Torrent::Torrent& torrent, 
+                            const FileIdentityInfoList& needs, const string& top_path, int* handle);
                     //retcode_t LoadDownload(const Torrent::Torrent& torrent, const Torrent::History& history, int* handle);
                     //retcode_t SerializeDownloadHistory();
                     //retcode_t ParseDownloadHistory();
@@ -142,11 +150,14 @@ namespace CoolDown{
                     LocalSockManagerPtr sockManager_;
 
                     int job_index_;
-                    typedef map<int, JobPtr> JobMap;
-                    FastMutex mutex_;
+                    typedef map<int,string> torrent_path_map_t;
+                    torrent_path_map_t torrent_path_map_;
 
+                    typedef map<int, JobPtr> JobMap;
                     //guard by mutex_;
                     JobMap jobs_;
+                    FastMutex mutex_;
+
                     ThreadPool jobThreads_;
 
                     Condition jobInfoCollectorTerminateCond_;

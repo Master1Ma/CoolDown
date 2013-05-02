@@ -41,6 +41,17 @@ namespace CoolDown{
         const static string INVALID_FILEID = "INVALID FILEID";
         const static string INVALID_CLIENTID = "INVALID CLIENTID";
 
+        struct FileIdentityInfo{
+            FileIdentityInfo();
+
+            FileIdentityInfo(const string& relative_path, const string& filename);
+            string relative_path;
+            string filename;
+        };
+
+
+        typedef vector<FileIdentityInfo> FileIdentityInfoList;
+
         class LocalFileInfo{
             public:
                 LocalFileInfo(const string& top_path);
@@ -49,8 +60,13 @@ namespace CoolDown{
                 bool has_local_file(const string& fileid, const string& relative_path, const string& filename);
                 bool has_file(const string& fileid);
                 map<string, StringList>& same_files_map();
+
+                string top_path() const{
+                    return this->top_path_;
+                }
+
             private:
-                string top_path;
+                string top_path_;
                 map<string, FilePtr> files;
                 
                 //this map is used when a Torrent has same file in different path.
@@ -159,6 +175,7 @@ namespace CoolDown{
             map<string, int> percentage_map;
             int max_parallel_task;
             map<string, file_bitmap_ptr> bitmap_map;
+
         };
 
 
@@ -170,7 +187,8 @@ namespace CoolDown{
                 StringList fileidlist_;
 
             public:
-                JobInfo(const Torrent::Torrent& torrent, const string& top_path);
+                JobInfo(const Torrent::Torrent& torrent, const string& top_path, 
+                        const FileIdentityInfoList& needs);
                 ~JobInfo();
 
                 string clientid() const;

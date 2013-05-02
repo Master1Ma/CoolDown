@@ -1,0 +1,19 @@
+package JobHistory;
+
+message FileInfo{
+    required string Fileid = 1;
+    required string RelativePath = 2;
+    required string Filename = 3;
+    repeated uint64 FileBit = 4;
+    required int32 FileBitCount = 5;
+}
+
+message JobHistoryInfo{
+    required string TorrentPath = 1;
+    required string LocalTopPath = 2;
+    repeated FileInfo File = 3;
+}
+
+message History{
+    repeated JobHistoryInfo JobInfo = 1;
+}

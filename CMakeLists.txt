@@ -20,8 +20,9 @@ SET( TrackerProto "${CMAKE_SOURCE_DIR}/proto/tracker.proto")
 SET( NetpackHeaderProto "${CMAKE_SOURCE_DIR}/proto/netpack_header.proto")
 SET( ClientProto "${CMAKE_SOURCE_DIR}/proto/client.proto" )
 SET( Torrent "${CMAKE_SOURCE_DIR}/proto/torrent.proto" )
+SET( JobHistory "${CMAKE_SOURCE_DIR}/proto/job_history.proto" )
 EXECUTE_PROCESS( COMMAND ${protoc.cmd} ${protoc.arg} ${protoc.arg2} 
-    ${TrackerProto} ${NetpackHeaderProto} ${ClientProto} ${Torrent} )
+    ${TrackerProto} ${NetpackHeaderProto} ${ClientProto} ${Torrent} ${JobHistory} )
 
 ADD_SUBDIRECTORY( public )
 ADD_SUBDIRECTORY( tracker )

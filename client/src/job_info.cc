@@ -28,9 +28,22 @@ namespace CoolDown{
             //}
         }
 
+        //FileIdentityInfo
+        FileIdentityInfo::FileIdentityInfo(){
+        }
+
+        FileIdentityInfo::FileIdentityInfo(const string& relative_path, const string& filename)
+            :relative_path(relative_path), filename(filename){
+            }
+
+        bool operator== (const FileIdentityInfo& lhs, const FileIdentityInfo& rhs){
+            return lhs.relative_path == rhs.relative_path 
+                   && lhs.filename == rhs.filename;
+        }
+
         //LocalFileInfo
         LocalFileInfo::LocalFileInfo(const string& top_path)
-        :top_path(top_path){
+        :top_path_(top_path){
         }
 
         retcode_t LocalFileInfo::add_file(const string& fileid, const string& relative_path, const string& filename, Int64 filesize){
@@ -42,7 +55,7 @@ namespace CoolDown{
                 //a torrent may contain the same file servral times, so this assert is wrong.
                 //poco_assert( iter == files.end() );
 
-                string filepath = Poco::format("%s%s%s", top_path, relative_path, filename);
+                string filepath = Poco::format("%s%s%s", top_path_, relative_path, filename);
                 StringList& same_files_path_list = same_files_[fileid];
                 same_files_path_list.push_back(filepath);
 
@@ -51,7 +64,7 @@ namespace CoolDown{
                     return ERROR_OK;
                 }
 
-                File dir( top_path + relative_path );
+                File dir( top_path_ + relative_path );
                 dir.createDirectories();
 
                 files[fileid] = FilePtr( new File(filepath) );
@@ -95,7 +108,7 @@ namespace CoolDown{
                 return false;
             }else{
                 StringList& path_list = same_files_[fileid];
-                return find(path_list.begin(), path_list.end(), top_path + relative_path + filename ) != path_list.end() ;
+                return find(path_list.begin(), path_list.end(), top_path_ + relative_path + filename ) != path_list.end() ;
             }
         }
 
@@ -210,13 +223,13 @@ namespace CoolDown{
         is_upload_paused(true),
         bytes_upload_this_second(0),
         bytes_download_this_second(0),
-        upload_speed_limit(1<<20),
-        download_speed_limit(1<<20)
+        upload_speed_limit(1<<30),
+        download_speed_limit(1<<30)
         {
         }
 
         //JobInfo
-        JobInfo::JobInfo(const Torrent::Torrent& torrent, const string& top_path)
+        JobInfo::JobInfo(const Torrent::Torrent& torrent, const string& top_path, const FileIdentityInfoList& needs)
         :app_(dynamic_cast<CoolClient&>(Application::instance()) ),
          logger_(app_.logger()),
          localFileInfo(top_path),
@@ -229,6 +242,13 @@ namespace CoolDown{
                 string fileid( file.checksum() );
                 string relative_path( file.relativepath() );
                 string filename( file.filename() );
+
+                FileIdentityInfo id_info(relative_path, filename);
+                if( needs.end() == find( needs.begin(), needs.end(), id_info ) ){
+                    //we donot need this file
+                    continue;
+                }
+
                 Int64 filesize( file.size() );
 
                 poco_debug_f2(logger_, "add file to Job, fileid : '%s', name : '%s'", fileid, filename );
@@ -237,17 +257,6 @@ namespace CoolDown{
                 localFileInfo.add_file(fileid, relative_path, filename, filesize);
                 fileidlist_.push_back(fileid);
             }
-            /*
-            vector<int> chunk_size_list;
-            transform(torrent.file().begin(), torrent.file().end(), back_inserter(chunk_size_list), retrieve_chunk_size);
-            transform(torrent.file().begin(), torrent.file().end(), back_inserter(fileidlist_), retrieve_fileid);
-            for(int i = 0; i != fileidlist_.size(); ++i){
-                string fileid( fileidlist_[i] );
-                poco_debug_f1(logger_, "add '%s' to Job", fileid);
-                downloadInfo.percentage_map[fileid] = 0;
-                downloadInfo.bitmap_map[fileid] = new file_bitmap_t( chunk_size_list[i], 0 );
-            }
-            */
         }
 
         JobInfo::~JobInfo(){
@@ -262,13 +271,8 @@ namespace CoolDown{
         }
 
         StringList JobInfo::UniqueFileidList() const{
-            //StringList res(this->fileidlist_);
             set<string> unique_fileids(this->fileidlist_.begin(), this->fileidlist_.end());
             return StringList(unique_fileids.begin(), unique_fileids.end());
-            //StringList::iterator end = unique(res.begin(), res.end());
-            //poco_debug_f1( logger_, "distance : %d", int( distance(res.begin(), end) ) );
-            //res.resize( distance(res.begin(), end) );
-            //return res;
         }
 
     }
