@@ -27,6 +27,7 @@
 #include <Poco/Net/SocketReactor.h>
 #include <Poco/Net/SocketAcceptor.h>
 #include <Poco/Thread.h>
+#include <Poco/RunnableAdapter.h>
 
 
 using std::set;
@@ -41,6 +42,7 @@ using Poco::Net::ServerSocket;
 using Poco::Net::SocketReactor;
 using Poco::Net::SocketAcceptor;
 using Poco::Thread;
+using Poco::RunnableAdapter;
 using namespace TrackerProto;
 using namespace ClientProto;
 using namespace JobHistory;
@@ -68,7 +70,7 @@ namespace CoolDown{
                 this->clientid_ = Verification::get_verification_code( Poco::Environment::nodeId() );
                 string default_history_file_path = format("%s%c%s", Path::current(), Path::separator(), string("history") );
                 this->history_file_path_ = config().getString("client.history_path", default_history_file_path);
-
+                this->exiting_ = false;
                 this->init_error_ = false;
                 string msg;
                 try{
@@ -86,7 +88,14 @@ namespace CoolDown{
             }
 
             void CoolClient::uninitialize(){
+                exiting_ = true;
                 this->SaveJobHistory( history_file_path_ );
+                while( this->job_info_collector_thread_.tryJoin( 1000 ) == false ){
+                    this->jobInfoCollectorTerminateCond_.signal();
+                }
+                while( this->report_progress_thread_.tryJoin( 1000 ) == false ){
+                    this->reportProgressCond_.signal();
+                }
                 ServerApplication::uninitialize();
             }
 
@@ -98,9 +107,11 @@ namespace CoolDown{
                 string tracker_ip("127.0.0.1");
                 string tracker_address( format("%s:%d", tracker_ip, (int)CoolClient::TRACKER_PORT) );
                 poco_debug_f1(logger(), "run application with %d", (int)args.size());
-                Thread job_info_collector_thread;
-                job_info_collector_thread.setOSPriority( Thread::getMaxOSPriority() );
-                job_info_collector_thread.start( *(new JobInfoCollector) );
+                this->job_info_collector_thread_.setOSPriority( Thread::getMaxOSPriority() );
+                this->job_info_collector_thread_.start( *(new JobInfoCollector) );
+
+                Poco::RunnableAdapter<CoolClient> reportProgressRunnable( *this, &CoolClient::ReportProgressRoutine );
+                this->report_progress_thread_.start( reportProgressRunnable );
 
                 if( args.size() == 1 ){
                     this->history_file_path_ = "/tmp/download.history";
@@ -118,27 +129,30 @@ namespace CoolDown{
                     if( ret != ERROR_OK ){
                         return ret;
                     }
-
-                    FileIdentityInfoList needs;
-                    for(int i = 0; i != torrent.file().size(); ++i){
-                        const Torrent::File& file = torrent.file().Get(i);
-                        needs.push_back(FileIdentityInfoList::value_type(file.relativepath(), file.filename()) );
-                    }
-
-                    ret = this->AddNewDownloadJob( args[0], torrent, needs, "/tmp/", &handle);
-                    poco_debug_f1(logger(), "AddNewJob retcode : %d", (int)ret);
-                    if( ret != ERROR_OK ){
+                    if( this->HasThisTorrent(torrent.torrentid()) ){
 
                     }else{
-                        ret = this->StartJob(handle);
-                        poco_debug_f1(logger(), "start_job retcode : %d", (int)ret);
+                        FileIdentityInfoList needs;
+                        for(int i = 0; i != torrent.file().size(); ++i){
+                            const Torrent::File& file = torrent.file().Get(i);
+                            needs.push_back(FileIdentityInfoList::value_type(file.relativepath(), file.filename()) );
+                        }
+
+                        ret = this->AddNewDownloadJob( args[0], torrent, needs, "/tmp/", &handle);
+                        poco_debug_f1(logger(), "AddNewJob retcode : %d", (int)ret);
                         if( ret != ERROR_OK ){
 
                         }else{
-                            Thread::sleep(2);
-                            this->RemoveJob(handle);
-                            jobThreads_.joinAll();
-                            poco_trace(logger(), "all jobThreads_ return.");
+                            ret = this->StartJob(handle);
+                            poco_debug_f1(logger(), "start_job retcode : %d", (int)ret);
+                            if( ret != ERROR_OK ){
+
+                            }else{
+                                //Thread::sleep(2);
+                                //this->RemoveJob(handle);
+                                jobThreads_.joinAll();
+                                poco_trace(logger(), "all jobThreads_ return.");
+                            }
                         }
                     }
                     this->LogoutTracker(tracker_ip, TRACKER_PORT);
@@ -172,6 +186,11 @@ namespace CoolDown{
                     ret = this->AddNewUploadJob( torrent_path, top_path, torrent, &handle);
                     poco_debug_f1(logger(), "AddNewUploadJob returns %d", (int)ret);
 
+                    if( ret == ERROR_OK ){
+                        ret = this->ResumeJob(handle);
+                        poco_debug_f1(logger(), "ResumeJob returns %d", (int)ret);
+                    }
+
                     poco_debug_f1(logger(), "client listen on port : %d", LOCAL_PORT);
                     ServerSocket svs(LOCAL_PORT);
                     svs.setReusePort(false);
@@ -194,9 +213,6 @@ namespace CoolDown{
                     //        "(2)Publish File and upload : Client LocalFile TorrentFile");
                 }
 
-                while( job_info_collector_thread.tryJoin( 1000 ) == false ){
-                    this->jobInfoCollectorTerminateCond_.signal();
-                }
 
                 return Application::EXIT_OK;
             }
@@ -522,7 +538,7 @@ namespace CoolDown{
                 if( pJob.isNull() ){
                     return ERROR_JOB_NOT_EXISTS;
                 }
-                pJob->MutableJobInfo()->downloadInfo.is_job_finished = true;
+                pJob->MutableJobInfo()->downloadInfo.is_job_removed = true;
                 pJob->MutableJobInfo()->downloadInfo.download_pause_cond.broadcast();
                 pJob->MutableJobInfo()->downloadInfo.download_speed_limit_cond.broadcast();
                 this->jobs_.erase(handle);
@@ -615,6 +631,8 @@ namespace CoolDown{
                             oneFile->set_filename( file_info_ptr->filename() );
                             oneFile->set_filebitcount( pBitmap->size() );
                             to_block_range( *pBitmap, google::protobuf::RepeatedFieldBackInserter(oneFile->mutable_filebit()) );
+                            //double percentage = pBitmap->count() / pBitmap->size();
+                            //poco_debug_f2(logger(), "in SaveJobHistory, file '%s', percentage = '%f'", oneFile->fileid(), percentage);
                         }
                     }
                 }
@@ -666,13 +684,24 @@ namespace CoolDown{
                 info->downloadInfo.download_total = history.downloadtotal();
                 for(int i = 0; i != history.file().size(); ++i){
                     const JobHistory::FileInfo& oneFile = history.file().Get(i);
-                    file_bitmap_ptr pBitmap = info->downloadInfo.bitmap_map[ oneFile.fileid() ];
+                    file_bitmap_ptr& pBitmap = info->downloadInfo.bitmap_map[ oneFile.fileid() ];
                     pBitmap.assign( new file_bitmap_t( oneFile.filebit().begin(), oneFile.filebit().end() ) );
                     pBitmap->resize( oneFile.filebitcount() );
                     info->downloadInfo.percentage_map[ oneFile.fileid() ] = pBitmap->count() / pBitmap->size();
+                    //double percentage = pBitmap->count() / pBitmap->size();
+                    //poco_debug_f2(logger(), "in ReloadOneJob, file '%s', percentage = '%f'", oneFile.fileid(), percentage);
                 }
+                info->downloadInfo.is_job_removed = false;
+                info->downloadInfo.is_stopped = false;
+                info->downloadInfo.is_download_paused = true;
+
+
                 int handle;
-                return this->AddNewJob(info, history.torrentpath(), &handle);
+                retcode_t ret = this->AddNewJob(info, history.torrentpath(), &handle);
+                if( ret != ERROR_OK ){
+                    return ret;
+                }
+                return ERROR_OK;
             }
 
             retcode_t CoolClient::AddNewJob(const SharedPtr<JobInfo>& info, const string& torrent_path, int* handle){
@@ -727,14 +756,14 @@ namespace CoolDown{
                     //Int64 filesize( file.size() );
 
                     //retcode_t ret = info->localFileInfo.add_file(fileid,
-                    //                                               relative_path,
+                    //             .                                  relative_path,
                     //                                               filename,
                     //                                               filesize);
                     if( same_fileid.find(fileid) != same_fileid.end() ){
                         continue;
                     }else{
                         same_fileid.insert(fileid);
-                        info->downloadInfo.bitmap_map[fileid]->flip();
+                        info->downloadInfo.bitmap_map[fileid]->set();
                     }
                 }
                 return this->AddNewJob(info, torrent_path, handle);
@@ -742,6 +771,7 @@ namespace CoolDown{
 
             void CoolClient::onJobInfoCollectorWakeUp(Timer& timer){
                 FastMutex::ScopedLock lock(mutex_);
+                progress_info_list_t progress_to_report;
                 BOOST_FOREACH(JobMap::value_type& p, jobs_){
                     int handle = p.first;
                     JobInfoPtr pInfo = p.second->MutableJobInfo();
@@ -751,13 +781,30 @@ namespace CoolDown{
                     format_speed(bytes_upload_this_second, &upload_speed);
                     format_speed(bytes_download_this_second, &download_speed);
 
+                    pInfo->downloadInfo.time_to_next_report -= 1;
+                    bool need_to_report;
+                    if( pInfo->downloadInfo.time_to_next_report == 0 
+                            && pInfo->downloadInfo.is_stopped == false
+                            && pInfo->downloadInfo.is_download_paused == false){
+
+                        need_to_report = true;
+                        pInfo->downloadInfo.time_to_next_report = DownloadInfo::report_period;
+                    }else{
+                        need_to_report = false;
+                    }
+
                     poco_notice_f3(logger(), "Job handle : %d, upload speed : %s, download speed : %s",
                             handle, upload_speed, download_speed);
 
+                    string tracker_address( pInfo->torrentInfo.tracker_address());
                     BOOST_FOREACH(DownloadInfo::file_bitmap_map_t::value_type& p, pInfo->downloadInfo.bitmap_map){
                         string fileid(p.first);
-                        int percentage = p.second->count() / p.second->size();
+                        int percentage = (double)p.second->count() / p.second->size() * 100;
                         pInfo->downloadInfo.percentage_map[fileid] = percentage;
+                        if( need_to_report ){
+                            ProgressInfo oneInfo = { tracker_address, fileid, percentage };
+                            progress_to_report.push_back( oneInfo );
+                        }
                     }
 
                     pInfo->downloadInfo.upload_total += bytes_upload_this_second;
@@ -765,6 +812,38 @@ namespace CoolDown{
                     pInfo->downloadInfo.bytes_upload_this_second = 0;
                     pInfo->downloadInfo.bytes_download_this_second = 0;
                     pInfo->downloadInfo.download_speed_limit_cond.broadcast();
+                }
+
+                if( progress_to_report.size() != 0 ){
+                    {
+                        FastMutex::ScopedLock lock(this->progress_info_mutex_);
+                        this->progress_info_to_report_.swap(progress_to_report);
+                    }
+                    this->reportProgressCond_.signal();
+
+                }
+            }
+
+            void CoolClient::ReportProgressRoutine(){
+                while(1){
+                    if( this->progress_info_to_report_.size() == 0 && exiting_ == false){
+                        FastMutex mutex;
+                        this->reportProgressCond_.wait(mutex);
+                    }else if( exiting_ == true ){
+                        break;
+                    }else{
+                        progress_info_list_t progress_info_to_report;
+                        {
+                            FastMutex::ScopedLock lock(this->progress_info_mutex_);
+                            progress_info_to_report.swap(this->progress_info_to_report_);
+                        }
+                        BOOST_FOREACH(const progress_info_list_t::value_type& oneInfo, progress_info_to_report){
+                            retcode_t ret = this->ReportProgress(oneInfo.tracker_address, oneInfo.fileid, oneInfo.percentage);
+                            poco_debug_f3(logger(), "Report progress of file '%s', percentage '%d', return %d",
+                                    oneInfo.fileid, oneInfo.percentage, (int)ret);
+                        }
+
+                    }
                 }
             }
 

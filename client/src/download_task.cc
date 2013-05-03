@@ -90,8 +90,8 @@ namespace CoolDown{
             while( nRecv < chunk_size){
                 if( downloadInfo_.is_stopped){
                     throw Exception("DownloadTask is stopped by setting is_stoped.");
-                }else if( downloadInfo_.is_job_finished ){
-                    throw Exception("DownloadTask is stopped by setting is_job_finished.");
+                }else if( downloadInfo_.is_job_removed ){
+                    throw Exception("DownloadTask is stopped by setting is_job_removed.");
                 }
 
                 if( downloadInfo_.is_download_paused ){

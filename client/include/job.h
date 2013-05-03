@@ -53,6 +53,7 @@ namespace CoolDown{
 
                 retcode_t request_clients(const string& fileid);
                 retcode_t shake_hand(const string& fileid, const string& clientid);
+                void reinit_file_owner_info(const string& fileid);
 
                 CoolClient& app_;
                 JobInfoPtr jobInfoPtr_;

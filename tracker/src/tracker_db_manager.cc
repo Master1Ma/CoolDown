@@ -195,8 +195,8 @@ retcode_t TrackerDBManager::update_file_owner_info(const FileOwnerInfo& info){
     FastMutex::ScopedLock lock(mutex_);
     using namespace Poco::Data;
     string sql;
-    format(sql, "UPDATE %s SET PERCENTAGE=? WHERE FILEID=? AND CLIENTID=?", fileOwnerTableName_);
-    session_ << sql, use(info.percentage()), use(info.fileid()), use(info.clientid()), now;
+    format(sql, "INSERT INTO %s (FILEID, CLIENTID, PERCENTAGE) VALUES( '%s', '%s', %d) ON DUPLICATE KEY UPDATE PERCENTAGE=VALUES(PERCENTAGE)", fileOwnerTableName_, info.fileid(), info.clientid(), info.percentage());
+    session_ << sql, now;
     return ERROR_OK;
 }
 

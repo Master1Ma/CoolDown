@@ -1,4 +1,6 @@
 1.define interface to Client GUI.
 2.integrate with Resource-Server
+3.optimize ReportProgressRoutine.
+4.request clients form tracker when all chunks are of no owner.(Done)
 
 Bug:

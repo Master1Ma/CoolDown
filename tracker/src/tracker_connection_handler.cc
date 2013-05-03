@@ -232,7 +232,9 @@ retcode_t TrackerConnectionHandler::HandleReportProgress(SharedPtr<Message> in, 
         return ERROR_PROTO_TYPE_ERROR;
     }
 
-    ret = app_.ReportProgress(reportProto->fileid(), reportProto->clientid(), reportProto->percentage());
+    ret = app_.ReportProgress(reportProto->clientid(), reportProto->fileid(), reportProto->percentage());
+    poco_debug_f3(logger_, "recv report progress from '%s', fileid : '%s', percentage '%d'",
+            reportProto->clientid(), reportProto->fileid(), reportProto->percentage() );
     if( ret != ERROR_OK ){
         return ret;
     }

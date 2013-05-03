@@ -116,8 +116,13 @@ namespace CoolDown{
 
                     //collect Job runtime info
                     void onJobInfoCollectorWakeUp(Timer& timer);
+                    void ReportProgressRoutine();
                     Condition& GetInfoCollectorCond(){
                         return this->jobInfoCollectorTerminateCond_;
+                    }
+
+                    bool exiting() const{
+                        return this->exiting_;
                     }
 
 
@@ -153,15 +158,29 @@ namespace CoolDown{
 
                     int LOCAL_PORT;
 
+                    bool exiting_;
+
                     bool init_error_;
                     string clientid_;
                     string history_file_path_;
                     LocalSockManagerPtr sockManager_;
+                    Poco::Thread job_info_collector_thread_;
+                    Poco::Thread report_progress_thread_;
 
                     int job_index_;
                     typedef map<int,string> torrent_path_map_t;
                     torrent_path_map_t torrent_path_map_;
                     set<string> torrent_ids_;
+
+
+                    FastMutex progress_info_mutex_;
+                    struct ProgressInfo{
+                        string tracker_address;
+                        string fileid;
+                        int percentage;
+                    };
+                    typedef vector< ProgressInfo > progress_info_list_t;
+                    progress_info_list_t progress_info_to_report_;
 
                     typedef map<int, JobPtr> JobMap;
                     //guard by mutex_;
@@ -172,6 +191,7 @@ namespace CoolDown{
                     ThreadPool jobThreads_;
 
                     Condition jobInfoCollectorTerminateCond_;
+                    Condition reportProgressCond_;
 
                     //NetTaskManager downloadManager_;
                     NetTaskManager uploadManager_;

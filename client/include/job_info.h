@@ -155,10 +155,11 @@ namespace CoolDown{
 
         struct DownloadInfo{
             DownloadInfo();
-            atomic_bool is_job_finished;
+            atomic_bool is_job_removed;
             atomic_bool is_stopped;
             atomic_bool is_download_paused;
             atomic_bool is_upload_paused;
+            atomic_bool is_download_finished;
 
             atomic_uint64_t bytes_upload_this_second;
             atomic_uint64_t bytes_download_this_second;
@@ -173,6 +174,9 @@ namespace CoolDown{
             Condition download_pause_cond;
             Condition job_stopped_cond;
             Condition job_finished_cond;
+
+            int time_to_next_report;
+            const static int report_period = 30;
 
             typedef map<string, int> percentage_map_t;
             typedef map<string, file_bitmap_ptr> file_bitmap_map_t;
