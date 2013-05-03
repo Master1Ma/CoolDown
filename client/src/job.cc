@@ -29,6 +29,7 @@ namespace CoolDown{
         jobInfo_(*jobInfoPtr_), 
         sockManager_(m), 
         cs_(jobInfo_, sockManager_), 
+        is_running_(false),
         tp_(2, 4),
         tm_(tp_),
         logger_(logger){
@@ -102,7 +103,12 @@ namespace CoolDown{
             pTask->set_reported();
         }
 
+        bool Job::is_running() const{
+            return this->is_running_;
+        }
+
         void Job::run(){
+            is_running_ = true;
             poco_debug(logger_, "Job start running!");
             vector<string> fileidlist( cs_.fileidlist() );
             retcode_t ret = ERROR_OK;
@@ -156,18 +162,27 @@ namespace CoolDown{
             poco_debug(logger_, "Before init_queue.");
             cs_.init_queue();
             poco_debug(logger_, "After init_queue.");
+            const int WAIT_TIMEOUT = 1000;
             while(1){
-                const static int WAIT_TIMEOUT = 1000;
                 poco_debug(logger_, "enter Job::run() while(1)");
-                //see if the Job(upload&download) has been shutdown
-                if( jobInfo_.downloadInfo.is_finished ){
+                if( jobInfo_.downloadInfo.is_job_finished ){
+                    poco_notice(logger_, "Exit Job::run() while(1) because is_job_finished = true.");
                     break;
+                }
+                //see if the Job(upload&download) has been stopped
+                if( jobInfo_.downloadInfo.is_stopped){
+                    poco_notice(logger_, "Job is stopped by setting is_stoped.");
+                    FastMutex mutex;
+                    jobInfo_.downloadInfo.job_stopped_cond.wait(mutex);
+                    //drop this execute
+                    continue;
                 }
                 //File file(jobInfo_.localFileInfo.local_file)
                 //see if the download has been paused
                 if( jobInfo_.downloadInfo.is_download_paused ){
+                    FastMutex mutex;
                     poco_debug(logger_, "download paused, going to wait the download_pause_cond.");
-                    jobInfo_.downloadInfo.download_pause_cond.wait(jobInfo_.downloadInfo.download_pause_mutex, WAIT_TIMEOUT);
+                    jobInfo_.downloadInfo.download_pause_cond.wait(mutex, WAIT_TIMEOUT);
                 }else{
                     ChunkInfoPtr chunk_info = cs_.get_chunk();
                     if( chunk_info.isNull() ){
@@ -312,6 +327,7 @@ namespace CoolDown{
             }
 
             poco_debug(logger_, "Job finished!");
+            is_running_ = false;
         }
 
         retcode_t Job::request_clients(const string& fileid){
@@ -334,7 +350,7 @@ namespace CoolDown{
             }
 
             FileOwnerInfoPtrList res;
-            retcode_t ret = app_.request_clients(tracker_address, fileid, percentage, 
+            retcode_t ret = app_.RequestClients(tracker_address, fileid, percentage, 
                                           needCount, clientidList, &res);
             if( ret != ERROR_OK ){
                 poco_warning_f1(logger_, "app_.request_clients return %d", (int)ret);

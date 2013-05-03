@@ -88,18 +88,23 @@ namespace CoolDown{
             Buffer<char> recvBuffer(chunk_size);
 
             while( nRecv < chunk_size){
-                if( downloadInfo_.is_finished ){
-                    throw Exception("Job Finished.");
+                if( downloadInfo_.is_stopped){
+                    throw Exception("DownloadTask is stopped by setting is_stoped.");
+                }else if( downloadInfo_.is_job_finished ){
+                    throw Exception("DownloadTask is stopped by setting is_job_finished.");
                 }
 
                 if( downloadInfo_.is_download_paused ){
                     poco_notice(logger_, "going to wait download_pause_cond in DownloadTask::runTask");
-                    downloadInfo_.download_pause_cond.wait(downloadInfo_.download_pause_mutex);
+                    FastMutex mutex;
+                    downloadInfo_.download_pause_cond.wait(mutex);
+                    continue;
                 }
                 if( downloadInfo_.bytes_download_this_second > downloadInfo_.download_speed_limit ){
                     poco_notice(logger_, "going to wait download_speed_limit_cond in DownloadTask::runTask");
                     FastMutex mutex;
                     downloadInfo_.download_speed_limit_cond.wait(mutex);
+                    continue;
                 }else{
 
                     int download_quota = downloadInfo_.download_speed_limit - downloadInfo_.bytes_download_this_second;

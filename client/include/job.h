@@ -44,6 +44,8 @@ namespace CoolDown{
                 JobInfoPtr MutableJobInfo();
                 const JobInfo& ConstJobInfo() const;
 
+                bool is_running() const;
+
                 static void convert_bitmap_to_transport_format(const file_bitmap_ptr& bitmap, ClientProto::FileInfo* pInfo);
                 static void conver_transport_format_bitmap(const ClientProto::FileInfo& info, file_bitmap_ptr& bitmap);
 
@@ -66,10 +68,10 @@ namespace CoolDown{
 
                 FastMutex idle_sock_mutex_;
 
+                bool is_running_;
                 ThreadPool tp_;
                 TaskManager tm_;
                 Logger& logger_;
-                
         };
     }
 }

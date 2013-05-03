@@ -137,7 +137,7 @@ err:
             string clientid( req->clientid() );
             string fileid( req->fileid() );
             int chunk_pos = req->chunknumber();
-            CoolClient::JobPtr pJob = app_.get_job(fileid);
+            CoolClient::JobPtr pJob = app_.GetJobByFileid(fileid);
             if( pJob.isNull() ){
                 poco_debug_f1(logger_, "We donot own this file '%s'", fileid);
                 return ERROR_FILE_NOT_EXISTS;
@@ -166,7 +166,7 @@ err:
             reply->set_clientid( app_.clientid() );
             reply->mutable_info()->set_fileid(fileid);
 
-            CoolClient::JobPtr pJob = app_.get_job(fileid);
+            CoolClient::JobPtr pJob = app_.GetJobByFileid(fileid);
             FileInfo* pInfo = reply->mutable_info();
             if( pJob.isNull() ){
                 poco_debug_f1(logger_, "peer request for file '%s' but we don't have that job running.", fileid);
@@ -180,7 +180,10 @@ err:
                 pInfo->set_filebitcount(0);
 
             }else{
-                poco_debug_f1(logger_, "in ShakeHand, we have this file : '%s'", fileid);
+                double count = pJob->MutableJobInfo()->downloadInfo.bitmap_map[fileid]->count();
+                double size = pJob->MutableJobInfo()->downloadInfo.bitmap_map[fileid]->size();
+                double percentage = count / size;
+                poco_debug_f2(logger_, "in ShakeHand, we have this file : '%s', percentage : '%f'", fileid, percentage);
                 pInfo->set_hasfile(1);
                 pInfo->set_percentage( pJob->MutableJobInfo()->downloadInfo.percentage_map[fileid] );
                 Job::convert_bitmap_to_transport_format(pJob->MutableJobInfo()->downloadInfo.bitmap_map[fileid], pInfo);

@@ -43,6 +43,11 @@ namespace CoolDown{
             poco_debug_f2(logger_, "going to send %d bytes to '%s'", chunk_size_, this->peerAddress_);
             int nSend = 0;
             while( nSend < chunk_size_ ){
+                if( downloadInfo_.is_stopped){
+                    throw Exception("UploadTask is stopped by setting is_stoped.");
+                }else if ( downloadInfo_.is_job_finished ){
+                    throw Exception("UploadTask is stopped by setting is_job_finished.");
+                }
                 int send_this_time = sock_.sendBytes( content.data() + nSend , chunk_size_ - nSend);
                 poco_debug_f2( logger_, "in upload task, send %d bytes this time, %d bytes to send.", send_this_time, chunk_size_ - send_this_time );
                 if( send_this_time <= 0 ){

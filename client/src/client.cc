@@ -105,7 +105,7 @@ namespace CoolDown{
                 if( args.size() == 1 ){
                     this->history_file_path_ = "/tmp/download.history";
                     this->clientid_ = "0123456789012345678901234567890123456789";
-                    if( ERROR_OK != this->login_tracker(tracker_ip, CoolClient::TRACKER_PORT) ){
+                    if( ERROR_OK != this->LoginTracker(tracker_ip, CoolClient::TRACKER_PORT) ){
                         poco_warning_f1(logger(), "cannot login tracker : %s", tracker_address);
                         return Application::EXIT_TEMPFAIL;
                     }
@@ -114,7 +114,7 @@ namespace CoolDown{
 
                     int handle = -1;
                     Torrent::Torrent torrent;
-                    retcode_t ret = this->parse_torrent(args[0], &torrent);
+                    retcode_t ret = this->ParseTorrent(args[0], &torrent);
                     if( ret != ERROR_OK ){
                         return ret;
                     }
@@ -130,21 +130,23 @@ namespace CoolDown{
                     if( ret != ERROR_OK ){
 
                     }else{
-                        ret = this->start_job(handle);
+                        ret = this->StartJob(handle);
                         poco_debug_f1(logger(), "start_job retcode : %d", (int)ret);
                         if( ret != ERROR_OK ){
 
                         }else{
+                            Thread::sleep(2);
+                            this->RemoveJob(handle);
                             jobThreads_.joinAll();
                             poco_trace(logger(), "all jobThreads_ return.");
                         }
                     }
-                    this->logout_tracker(tracker_ip, TRACKER_PORT);
+                    this->LogoutTracker(tracker_ip, TRACKER_PORT);
 
                 }else if( args.size() == 2 ){
                     LOCAL_PORT = 9024;
                     this->history_file_path_ = "/tmp/upload.history";
-                    if( ERROR_OK != this->login_tracker(tracker_ip, CoolClient::TRACKER_PORT) ){
+                    if( ERROR_OK != this->LoginTracker(tracker_ip, CoolClient::TRACKER_PORT) ){
                         poco_warning_f1(logger(), "cannot login tracker : %s", tracker_address);
                     }
 
@@ -156,12 +158,12 @@ namespace CoolDown{
                     string top_path( parent.toString() );
                     string torrent_path( args[1] );
 
-                    ret = this->make_torrent(resource_path, torrent_path, 1 << 20, 1, tracker_address);
-                    poco_debug_f1(logger(), "make_torrent return : %d", (int)ret);
+                    ret = this->MakeTorrent(resource_path, torrent_path, 1 << 20, 1, tracker_address);
+                    poco_debug_f1(logger(), "MakeTorrent return : %d", (int)ret);
 
                     Torrent::Torrent torrent;
-                    ret = this->parse_torrent(torrent_path, &torrent);
-                    poco_debug_f1(logger(), "parse_torrent returns %d", (int)ret);
+                    ret = this->ParseTorrent(torrent_path, &torrent);
+                    poco_debug_f1(logger(), "ParseTorrent returns %d", (int)ret);
                     if( ERROR_OK != ret ){
                         return Application::EXIT_TEMPFAIL;
                     }
@@ -185,7 +187,7 @@ namespace CoolDown{
 
                     reactor.stop();
                     thread.join();
-                    this->logout_tracker(tracker_ip, TRACKER_PORT);
+                    this->LogoutTracker(tracker_ip, TRACKER_PORT);
                 }else{
                     //poco_notice(logger(), "Usage : \n"
                     //        "(1)Download File : Client TorrentFile\n" 
@@ -203,7 +205,7 @@ namespace CoolDown{
                 return this->uploadManager_;
             }
 
-            retcode_t CoolClient::login_tracker(const string& tracker_address, int port){
+            retcode_t CoolClient::LoginTracker(const string& tracker_address, int port){
                 retcode_t ret = sockManager_->connect_tracker(tracker_address, port);
                 if( ret != ERROR_OK ){
                     poco_warning_f3(logger(), "Cannot connect tracker, ret : %hd, addr : %s, port : %d.", ret, tracker_address, port);
@@ -221,7 +223,7 @@ namespace CoolDown{
                 return ret;
             }
 
-            retcode_t CoolClient::logout_tracker(const string& tracker_address, int port){
+            retcode_t CoolClient::LogoutTracker(const string& tracker_address, int port){
                 LocalSockManager::SockPtr sock( sockManager_->get_tracker_sock( format("%s:%d", tracker_address, port)) );
                 if( sock.isNull() ){
                     return ERROR_NET_CONNECT;
@@ -233,7 +235,7 @@ namespace CoolDown{
                 return ret;
             }
 
-            retcode_t CoolClient::publish_resource_to_tracker(const string& tracker_address, const string& fileid){
+            retcode_t CoolClient::PublishResourceToTracker(const string& tracker_address, const string& fileid){
                 LocalSockManager::SockPtr sock( sockManager_->get_tracker_sock(tracker_address) );
                 if( sock.isNull() ){
                     return ERROR_NET_NOT_CONNECTED;
@@ -247,12 +249,12 @@ namespace CoolDown{
 
             }
 
-            retcode_t CoolClient::report_progress(const string& tracker_address, const string& fileid, int percentage){
+            retcode_t CoolClient::ReportProgress(const string& tracker_address, const string& fileid, int percentage){
                 LocalSockManager::SockPtr sock( sockManager_->get_tracker_sock(tracker_address) );
                 if( sock.isNull() ){
                     return ERROR_NET_CONNECT;
                 }
-                ReportProgress msg;
+                TrackerProto::ReportProgress msg;
                 msg.set_clientid( this->clientid() );
                 msg.set_fileid( fileid );
                 msg.set_percentage( percentage );
@@ -261,7 +263,7 @@ namespace CoolDown{
                 return ret;
             }
 
-            retcode_t CoolClient::request_clients(const string& tracker_address, const string& fileid, int currentPercentage, 
+            retcode_t CoolClient::RequestClients(const string& tracker_address, const string& fileid, int currentPercentage, 
                 int needCount, const ClientIdCollection& clientids, FileOwnerInfoPtrList* pInfoList){
                 poco_assert( pInfoList != NULL );
                 poco_assert( currentPercentage >= 0 );
@@ -286,7 +288,7 @@ namespace CoolDown{
                 retcode_t ret = handle_reply_message< QueryPeerReply >( sock, msg, PAYLOAD_REQUEST_PEER, &r);
                 poco_notice_f2(logger(), "Recv %d clients by QueryPeer. fileid = '%s'", r->info().size(), fileid);
                 if( ret != ERROR_OK || r->returncode() != ERROR_OK ){
-                    poco_warning_f2(logger(), "CoolClient::request_clients error. func ret : %d, request ret : %d",
+                    poco_warning_f2(logger(), "CoolClient::RequestClients error. func ret : %d, request ret : %d",
                             (int)ret, (int)r->returncode() );
                     return ERROR_UNKNOWN;
                 }
@@ -338,10 +340,10 @@ namespace CoolDown{
                     return ret;
                 
             }
-            retcode_t CoolClient::make_torrent(const Path& path, const Path& torrent_file_path, 
+            retcode_t CoolClient::MakeTorrent(const Path& path, const Path& torrent_file_path, 
                     Int32 chunk_size, Int32 type, const string& tracker_address){
 
-                string pathmsg( format("Call make_torrent with path : %s, torrent_file_path : %s", 
+                string pathmsg( format("Call MakeTorrent with path : %s, torrent_file_path : %s", 
                                     path.toString(), torrent_file_path.toString()
                                 )
                             );
@@ -456,69 +458,107 @@ namespace CoolDown{
                 return ERROR_OK;
             }
 
-            retcode_t CoolClient::add_job(const Torrent::Torrent& torrent, const string& top_path, int* internal_handle){
-                FileIdentityInfoList needs;
-                for(int i = 0; i != torrent.file().size(); ++i){
-                    const Torrent::File& file = torrent.file().Get(i);
-                    needs.push_back(FileIdentityInfoList::value_type(file.relativepath(), file.filename()) );
-                }
-                SharedPtr<JobInfo> info( new JobInfo( torrent, top_path, needs ) );
-                int this_job_index = job_index_;
+            //retcode_t CoolClient::add_job(const Torrent::Torrent& torrent, const string& top_path, int* internal_handle){
+            //    FileIdentityInfoList needs;
+            //    for(int i = 0; i != torrent.file().size(); ++i){
+            //        const Torrent::File& file = torrent.file().Get(i);
+            //        needs.push_back(FileIdentityInfoList::value_type(file.relativepath(), file.filename()) );
+            //    }
+            //    SharedPtr<JobInfo> info( new JobInfo( torrent, top_path, needs ) );
+            //    int this_job_index = job_index_;
+            //    FastMutex::ScopedLock lock(mutex_);
+            //    jobs_[job_index_] = JobPtr( new Job(info, *(this->sockManager_), logger()) );
+            //    ++job_index_;
+            //    *internal_handle = this_job_index;
+            //    return ERROR_OK;
+            //}
+
+            retcode_t CoolClient::StartJob(int handle){
                 FastMutex::ScopedLock lock(mutex_);
-                jobs_[job_index_] = JobPtr( new Job(info, *(this->sockManager_), logger()) );
-                ++job_index_;
-                *internal_handle = this_job_index;
+                retcode_t ret = this->ResumeJobWithoutLock(handle);
+                if( ret != ERROR_OK ){
+                    return ret;
+                }
+                JobPtr pJob = this->GetJobWithoutLock(handle);
+                poco_assert( pJob.isNull() == false );
+                if( pJob->is_running() ){
+                    return ERROR_JOB_ALREADY_STARTED;
+                }
+                jobThreads_.start(*pJob);
                 return ERROR_OK;
             }
 
-            retcode_t CoolClient::start_job(int handle){
+            retcode_t CoolClient::StopJob(int handle){
                 FastMutex::ScopedLock lock(mutex_);
-                JobMap::iterator iter = jobs_.find(handle);
-                if( iter == jobs_.end() ){
+                JobPtr pJob = this->GetJobWithoutLock(handle);
+                if( pJob.isNull() ){
                     return ERROR_JOB_NOT_EXISTS;
                 }
-                this->resume_download_without_lock(handle);
-                jobThreads_.start(*(iter->second));
+                pJob->MutableJobInfo()->downloadInfo.is_stopped = true;
                 return ERROR_OK;
             }
-            retcode_t CoolClient::pause_download_without_lock(int handle){
-                JobMap::iterator iter = jobs_.find(handle);
-                if( iter == jobs_.end() ){
+
+            retcode_t CoolClient::PauseJobWithoutLock(int handle){
+                JobPtr pJob = this->GetJobWithoutLock(handle);
+                if( pJob.isNull() ){
                     return ERROR_JOB_NOT_EXISTS;
                 }
-                iter->second->MutableJobInfo()->downloadInfo.is_download_paused = true;
+                pJob->MutableJobInfo()->downloadInfo.is_download_paused = true;
                 return ERROR_OK;
             }
 
-            retcode_t CoolClient::pause_download(int handle){
+            retcode_t CoolClient::PauseJob(int handle){
                 FastMutex::ScopedLock lock(mutex_);
-                return this->pause_download_without_lock(handle);
+                return this->PauseJobWithoutLock(handle);
             }
 
-            retcode_t CoolClient::resume_download(int handle){
+            retcode_t CoolClient::ResumeJob(int handle){
                 FastMutex::ScopedLock lock(mutex_);
-                return this->resume_download_without_lock(handle);
+                return this->ResumeJobWithoutLock(handle);
             }
 
-            retcode_t CoolClient::resume_download_without_lock(int handle){
-                JobMap::iterator iter = jobs_.find(handle);
-                if( iter == jobs_.end() ){
+            retcode_t CoolClient::RemoveJob(int handle){
+                JobPtr pJob = this->GetJobByHandle(handle);
+                if( pJob.isNull() ){
                     return ERROR_JOB_NOT_EXISTS;
                 }
-                iter->second->MutableJobInfo()->downloadInfo.is_download_paused = false;
+                pJob->MutableJobInfo()->downloadInfo.is_job_finished = true;
+                pJob->MutableJobInfo()->downloadInfo.download_pause_cond.broadcast();
+                pJob->MutableJobInfo()->downloadInfo.download_speed_limit_cond.broadcast();
+                this->jobs_.erase(handle);
+
+                //since we never roll back the handle, we never destructor the job until application exit;
+                this->removed_jobs_[handle] = pJob;
                 return ERROR_OK;
             }
 
-            CoolClient::JobPtr CoolClient::get_job(int handle){
-                FastMutex::ScopedLock lock(mutex_);
-                if( jobs_.find(handle) == jobs_.end() ){
-                    return JobPtr();
-                }else{
-                    return jobs_[handle];
+            retcode_t CoolClient::ResumeJobWithoutLock(int handle){
+                JobPtr pJob = this->GetJobWithoutLock(handle);
+                if( pJob.isNull() ){
+                    return ERROR_JOB_NOT_EXISTS;
                 }
+
+                pJob->MutableJobInfo()->downloadInfo.is_stopped = false;
+                pJob->MutableJobInfo()->downloadInfo.is_download_paused = false;
+                pJob->MutableJobInfo()->downloadInfo.download_pause_cond.broadcast();
+                pJob->MutableJobInfo()->downloadInfo.job_stopped_cond.broadcast();
+                return ERROR_OK;
             }
 
-            CoolClient::JobPtr CoolClient::get_job(const string& fileid){
+            CoolClient::JobPtr CoolClient::GetJobWithoutLock(int handle){
+                JobPtr res(NULL);
+                if( jobs_.find(handle) != jobs_.end() ){
+                    res = jobs_[handle];
+                }
+                return res;
+            }
+
+            CoolClient::JobPtr CoolClient::GetJobByHandle(int handle){
+                FastMutex::ScopedLock lock(mutex_);
+                return this->GetJobWithoutLock(handle);
+            }
+
+            CoolClient::JobPtr CoolClient::GetJobByFileid(const string& fileid){
                 FastMutex::ScopedLock lock(mutex_);
                 BOOST_FOREACH(JobMap::value_type& p, jobs_){
                     const vector<string>& fileidlist = p.second->ConstJobInfo().fileidlist();
@@ -529,11 +569,12 @@ namespace CoolDown{
                 return JobPtr(NULL);
             }
 
-            bool CoolClient::has_this_torrent(const string& torrent_id){
+
+            bool CoolClient::HasThisTorrent(const string& torrent_id){
                 return torrent_ids_.end() != torrent_ids_.find( torrent_id );
             }
 
-            void CoolClient::register_torrent(const string& torrent_id){
+            void CoolClient::RegisterTorrent(const string& torrent_id){
                 poco_debug_f1(logger(),"register torrent_id : %s", torrent_id);
                 this->torrent_ids_.insert( torrent_id );
             }
@@ -600,7 +641,7 @@ namespace CoolDown{
                 for(int i = 0; i != history.jobinfo().size(); ++i){
                     const JobHistoryInfo& oneHistory = history.jobinfo().Get(i);
                     Torrent::Torrent torrent;
-                    if( ERROR_OK != this->parse_torrent(oneHistory.torrentpath(), &torrent) ){
+                    if( ERROR_OK != this->ParseTorrent(oneHistory.torrentpath(), &torrent) ){
                         continue;
                     }
                     if( ERROR_OK != this->ReloadOneJob(torrent, oneHistory) ){
@@ -612,8 +653,8 @@ namespace CoolDown{
             }
 
             retcode_t CoolClient::ReloadOneJob(const Torrent::Torrent& torrent, const JobHistoryInfo& history){
-                poco_assert( this->has_this_torrent(torrent.torrentid()) == false );
-                this->register_torrent( torrent.torrentid() );
+                poco_assert( this->HasThisTorrent(torrent.torrentid()) == false );
+                this->RegisterTorrent( torrent.torrentid() );
                 FileIdentityInfoList needs;
                 for(int i = 0; i != history.file().size(); ++i){
                     const JobHistory::FileInfo& oneFile = history.file().Get(i);
@@ -650,11 +691,11 @@ namespace CoolDown{
                     const FileIdentityInfoList& needs, const string& top_path, int* handle){
 
                 string torrent_id( torrent.torrentid() );
-                if( this->has_this_torrent(torrent_id) ){
+                if( this->HasThisTorrent(torrent_id) ){
                     return ERROR_JOB_EXISTS;
                 }
                 poco_debug_f1(logger(), "in  AddNewDownloadJob, pass unique check of torrent_id : %s", torrent_id);
-                this->register_torrent( torrent_id );
+                this->RegisterTorrent( torrent_id );
 
                 SharedPtr<JobInfo> info( new JobInfo( torrent, top_path, needs) );
                 return this->AddNewJob(info, torrent_path, handle);
@@ -664,11 +705,11 @@ namespace CoolDown{
                     const Torrent::Torrent& torrent, int* handle){
 
                 string torrent_id( torrent.torrentid() );
-                if( this->has_this_torrent(torrent_id) ){
+                if( this->HasThisTorrent(torrent_id) ){
                     return ERROR_JOB_EXISTS;
                 }
                 poco_debug_f1(logger(), "in  AddNewUploadJob, pass unique check of torrent_id : %s", torrent_id);
-                this->register_torrent( torrent_id );
+                this->RegisterTorrent( torrent_id );
 
                 FileIdentityInfoList needs;
                 for(int i = 0; i != torrent.file().size(); ++i){
@@ -727,10 +768,10 @@ namespace CoolDown{
                 }
             }
 
-            retcode_t CoolClient::parse_torrent(const Path& torrent_file_path, Torrent::Torrent* pTorrent){
+            retcode_t CoolClient::ParseTorrent(const Path& torrent_file_path, Torrent::Torrent* pTorrent){
                 ifstream ifs(torrent_file_path.toString().c_str() );
                 if( !ifs ){
-                    poco_debug_f1(logger(), "Cannot open %s in parse_torrent.", torrent_file_path.toString());
+                    poco_debug_f1(logger(), "Cannot open %s in ParseTorrent.", torrent_file_path.toString());
                     return ERROR_FILE_NOT_EXISTS;
                 }
                 poco_assert(pTorrent != NULL);

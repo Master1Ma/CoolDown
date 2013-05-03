@@ -223,7 +223,8 @@ namespace CoolDown{
 
         //DownloadInfo
         DownloadInfo::DownloadInfo()
-        :is_finished(false),
+        :is_job_finished(false),
+        is_stopped(true),
         is_download_paused(true),
         is_upload_paused(true),
         bytes_upload_this_second(0),

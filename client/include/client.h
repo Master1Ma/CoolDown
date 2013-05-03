@@ -81,39 +81,38 @@ namespace CoolDown{
                     NetTaskManager& upload_manager();
 
                     //communicate with tracker
-                    retcode_t login_tracker(const string& tracker_address, int port = TRACKER_PORT);
-                    retcode_t logout_tracker(const string& tracker_address, int port = TRACKER_PORT);
-                    retcode_t publish_resource_to_tracker(const string& tracker_address, const string& fileid);
-                    retcode_t report_progress(const string& tracker_address, const string& fileid, int percentage);
-                    retcode_t request_clients(const string& tracker_address, const string& fileid, int currentPercentage, 
+                    retcode_t LoginTracker(const string& tracker_address, int port = TRACKER_PORT);
+                    retcode_t LogoutTracker(const string& tracker_address, int port = TRACKER_PORT);
+                    retcode_t PublishResourceToTracker(const string& tracker_address, const string& fileid);
+                    retcode_t ReportProgress(const string& tracker_address, const string& fileid, int percentage);
+                    retcode_t RequestClients(const string& tracker_address, const string& fileid, int currentPercentage, 
                                           int needCount, const ClientIdCollection& clientids, FileOwnerInfoPtrList* pInfoList);
 
                     //communicate with client
                     retcode_t shake_hand(const ClientProto::ShakeHand& self, ClientProto::ShakeHand& peer);
 
-                    //job control
-                    retcode_t add_job(const Torrent::Torrent& torrent, const string& top_path, int* internal_handle);
+                    //retcode_t add_job(const Torrent::Torrent& torrent, const string& top_path, int* internal_handle);
                     
                     retcode_t SaveJobHistory(const string& filename);
                     retcode_t ReloadJobHistory(const string& filename);
                     retcode_t ReloadOneJob(const Torrent::Torrent& torrent, const JobHistory::JobHistoryInfo& history);
-
                     retcode_t AddNewDownloadJob(const string& torrent_path, const Torrent::Torrent& torrent,
                             const FileIdentityInfoList& needs, const string& top_path, int* handle);
-
                     retcode_t AddNewUploadJob(const string& torrent_path, const string& top_path, 
                             const Torrent::Torrent& torrent, int* handle);
-
                     retcode_t AddNewJob(const SharedPtr<JobInfo>& info, const string& torrent_path, int* handle);
 
-                    retcode_t start_job(int handle);
-                    retcode_t pause_download(int handle);
-                    retcode_t resume_download(int handle);
-                    JobPtr get_job(int handle);
-                    JobPtr get_job(const string& fileid);
+                    //job control
+                    retcode_t StartJob(int handle);
+                    retcode_t PauseJob(int handle);
+                    retcode_t StopJob(int handle);
+                    retcode_t ResumeJob(int handle);
+                    retcode_t RemoveJob(int handle);
+                    JobPtr GetJobByHandle(int handle);
+                    JobPtr GetJobByFileid(const string& fileid);
 
-                    bool has_this_torrent(const string& torrent_id);
-                    void register_torrent(const string& torrent_id);
+                    bool HasThisTorrent(const string& torrent_id);
+                    void RegisterTorrent(const string& torrent_id);
 
                     //collect Job runtime info
                     void onJobInfoCollectorWakeUp(Timer& timer);
@@ -124,8 +123,8 @@ namespace CoolDown{
 
 
                     //torrent operations
-                    retcode_t parse_torrent(const Path& torrent_file_path, Torrent::Torrent* pTorrent);
-                    retcode_t make_torrent(const Path& path, const Path& torrent_file_path, 
+                    retcode_t ParseTorrent(const Path& torrent_file_path, Torrent::Torrent* pTorrent);
+                    retcode_t MakeTorrent(const Path& path, const Path& torrent_file_path, 
                             Int32 chunk_size, Int32 type, const string& tracker_address);
 
                     //self identity
@@ -148,8 +147,9 @@ namespace CoolDown{
                     void list_dir_recursive(const File& file, FileList* pList);
 
                     //no lock job ops
-                    retcode_t pause_download_without_lock(int handle);
-                    retcode_t resume_download_without_lock(int handle);
+                    retcode_t PauseJobWithoutLock(int handle);
+                    retcode_t ResumeJobWithoutLock(int handle);
+                    JobPtr GetJobWithoutLock(int handle);
 
                     int LOCAL_PORT;
 
@@ -166,6 +166,7 @@ namespace CoolDown{
                     typedef map<int, JobPtr> JobMap;
                     //guard by mutex_;
                     JobMap jobs_;
+                    JobMap removed_jobs_;
                     FastMutex mutex_;
 
                     ThreadPool jobThreads_;
