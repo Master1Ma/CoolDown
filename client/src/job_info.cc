@@ -227,11 +227,11 @@ namespace CoolDown{
         is_stopped(true),
         is_download_paused(true),
         is_upload_paused(true),
-        is_download_finished(false),
+        //is_download_finished(false),
         bytes_upload_this_second(0),
         bytes_download_this_second(0),
         upload_speed_limit(1<<30),
-        download_speed_limit(1<<20),
+        download_speed_limit(1<<30),
         time_to_next_report(DownloadInfo::report_period)    //report progress to tracker every 30 seconds
         {
         }

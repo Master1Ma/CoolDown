@@ -751,19 +751,13 @@ namespace CoolDown{
                 for(int pos = 0; pos != torrent.file().size(); ++pos){
                     const Torrent::File& file = torrent.file().Get(pos);
                     string fileid( file.checksum() );
-                    //string relative_path( file.relativepath() );
-                    //string filename( file.filename() );
-                    //Int64 filesize( file.size() );
-
-                    //retcode_t ret = info->localFileInfo.add_file(fileid,
-                    //             .                                  relative_path,
-                    //                                               filename,
-                    //                                               filesize);
                     if( same_fileid.find(fileid) != same_fileid.end() ){
                         continue;
                     }else{
                         same_fileid.insert(fileid);
                         info->downloadInfo.bitmap_map[fileid]->set();
+                        retcode_t publish_ret = this->PublishResourceToTracker(torrent.trackeraddress(), fileid);
+                        poco_debug_f2(logger(), "Publish '%s' to tracker return %d", fileid, (int)publish_ret);
                     }
                 }
                 return this->AddNewJob(info, torrent_path, handle);
@@ -784,8 +778,8 @@ namespace CoolDown{
                     pInfo->downloadInfo.time_to_next_report -= 1;
                     bool need_to_report;
                     if( pInfo->downloadInfo.time_to_next_report == 0 
-                            && pInfo->downloadInfo.is_stopped == false
-                            && pInfo->downloadInfo.is_download_paused == false){
+                            && p.second->is_running() == true
+                            ){
 
                         need_to_report = true;
                         pInfo->downloadInfo.time_to_next_report = DownloadInfo::report_period;

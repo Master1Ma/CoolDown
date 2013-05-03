@@ -159,7 +159,7 @@ namespace CoolDown{
             atomic_bool is_stopped;
             atomic_bool is_download_paused;
             atomic_bool is_upload_paused;
-            atomic_bool is_download_finished;
+            //atomic_bool is_download_finished;
 
             atomic_uint64_t bytes_upload_this_second;
             atomic_uint64_t bytes_download_this_second;
