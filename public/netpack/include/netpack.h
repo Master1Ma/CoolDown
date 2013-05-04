@@ -21,6 +21,8 @@ using Poco::Buffer;
 using Poco::SharedPtr;
 using google::protobuf::Message;
 
+#pragma comment(lib,"WS2_32.LIB")
+
 class NetPack{
     public:
         typedef StreamSocket SockType;

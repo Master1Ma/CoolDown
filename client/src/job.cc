@@ -162,7 +162,7 @@ namespace CoolDown{
             poco_debug(logger_, "Before init_queue.");
             cs_.init_queue();
             poco_debug(logger_, "After init_queue.");
-            const int WAIT_TIMEOUT = 1000;
+            const int COND_WAIT_TIMEOUT = 1000;
             while(1){
                 poco_debug(logger_, "enter Job::run() while(1)");
                 if( jobInfo_.downloadInfo.is_job_removed ){
@@ -182,7 +182,7 @@ namespace CoolDown{
                 if( jobInfo_.downloadInfo.is_download_paused ){
                     FastMutex mutex;
                     poco_debug(logger_, "download paused, going to wait the download_pause_cond.");
-                    jobInfo_.downloadInfo.download_pause_cond.wait(mutex, WAIT_TIMEOUT);
+                    jobInfo_.downloadInfo.download_pause_cond.wait(mutex, COND_WAIT_TIMEOUT);
                 }else{
                     ChunkInfoPtr chunk_info = cs_.get_chunk();
                     if( chunk_info.isNull() ){
@@ -255,7 +255,7 @@ namespace CoolDown{
                             poco_debug_f1(logger_, "available thread : %d", tp_.available() );
                             while( tp_.available() == 0 ){
                                 try{
-                                    this->available_thread_cond_.wait( this->available_thread_mutex_, WAIT_TIMEOUT);
+                                    this->available_thread_cond_.wait( this->available_thread_mutex_, COND_WAIT_TIMEOUT);
                                     poco_debug(logger_, "wake up from wait available_thread_cond_");
                                 }catch(Poco::TimeoutException& e){
                                     poco_notice(logger_, "wait available_thread_cond_ timeout.");

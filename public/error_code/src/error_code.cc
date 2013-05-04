@@ -1,5 +1,5 @@
 #include "error_code.h"
-
+/*
 const char* errmsg(retcode_t ret){
     const char* p = "Everything is OK.";
     if( ret == ERROR_OK ){
@@ -19,3 +19,4 @@ const char* errmsg(retcode_t ret){
     }
     return p;
 }
+*/
