@@ -13,10 +13,10 @@ IF( NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src )
 ENDIF()
 
 INCLUDE_DIRECTORIES( include )
-execute_process(COMMAND ln -Ff ${CMAKE_SOURCE_DIR}/proto/tracker.pb.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/tracker.pb.h)
-execute_process(COMMAND ln -Ff ${CMAKE_SOURCE_DIR}/proto/tracker.pb.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/tracker.pb.cc)
+FILE(COPY ${CMAKE_SOURCE_DIR}/proto/tracker.pb.h DESTINATION
+    ${CMAKE_CURRENT_SOURCE_DIR}/include)
+FILE(COPY ${CMAKE_SOURCE_DIR}/proto/tracker.pb.cc DESTINATION
+    ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 FIND_LIBRARY(POCO_FOUNDATION PocoFoundation)
 FIND_LIBRARY(POCO_NET PocoNet)

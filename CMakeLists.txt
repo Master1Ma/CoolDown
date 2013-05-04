@@ -13,7 +13,7 @@ SET( CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/public/lib )
 ADD_DEFINITIONS( -DWall )
 
 #recompile the proto files
-SET( protoc.cmd "protoc")
+SET( protoc.cmd "protoc.exe")
 SET( protoc.arg "-I=${CMAKE_SOURCE_DIR}/proto")
 SET( protoc.arg2 "--cpp_out=${CMAKE_SOURCE_DIR}/proto" )
 SET( TrackerProto "${CMAKE_SOURCE_DIR}/proto/tracker.proto")
@@ -23,7 +23,8 @@ SET( Torrent "${CMAKE_SOURCE_DIR}/proto/torrent.proto" )
 SET( JobHistory "${CMAKE_SOURCE_DIR}/proto/job_history.proto" )
 EXECUTE_PROCESS( COMMAND ${protoc.cmd} ${protoc.arg} ${protoc.arg2} 
     ${TrackerProto} ${NetpackHeaderProto} ${ClientProto} ${Torrent} ${JobHistory} )
-
+message(STATUS ${CMAKE_INCLUDE_PATH})
+message(STATUS ${CMAKE_LIBRARY_PATH})
 ADD_SUBDIRECTORY( public )
 ADD_SUBDIRECTORY( tracker )
 ADD_SUBDIRECTORY( client )

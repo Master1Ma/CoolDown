@@ -13,10 +13,10 @@ IF( NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src )
 ENDIF()
 
 INCLUDE_DIRECTORIES( include )
-execute_process(COMMAND ln -Ff ${CMAKE_SOURCE_DIR}/proto/job_history.pb.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/job_history.pb.h)
-execute_process(COMMAND ln -Ff ${CMAKE_SOURCE_DIR}/proto/job_history.pb.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/job_history.pb.cc)
+FILE(COPY ${CMAKE_SOURCE_DIR}/proto/job_history.pb.h DESTINATION
+    ${CMAKE_CURRENT_SOURCE_DIR}/include)
+FILE(COPY ${CMAKE_SOURCE_DIR}/proto/job_history.pb.cc DESTINATION
+    ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 FIND_LIBRARY(PROTOBUF protobuf)
 

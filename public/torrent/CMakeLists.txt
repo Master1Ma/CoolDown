@@ -13,10 +13,10 @@ IF( NOT EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/src )
 ENDIF()
 
 INCLUDE_DIRECTORIES( include )
-execute_process(COMMAND ln -Ff ${CMAKE_SOURCE_DIR}/proto/torrent.pb.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/torrent.pb.h)
-execute_process(COMMAND ln -Ff ${CMAKE_SOURCE_DIR}/proto/torrent.pb.cc
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/torrent.pb.cc)
+FILE(COPY ${CMAKE_SOURCE_DIR}/proto/torrent.pb.h DESTINATION
+    ${CMAKE_CURRENT_SOURCE_DIR}/include)
+FILE(COPY ${CMAKE_SOURCE_DIR}/proto/torrent.pb.cc DESTINATION
+    ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
 FIND_LIBRARY(PROTOBUF protobuf)
 
