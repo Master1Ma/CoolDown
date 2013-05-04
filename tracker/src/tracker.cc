@@ -17,7 +17,6 @@
 #include "Poco/Util/OptionSet.h"
 #include "Poco/Util/HelpFormatter.h"
 #include "Poco/Data/Session.h"
-#include "Poco/Data/SQLite/Connector.h"
 #include <Poco/DateTimeFormat.h>
 #include <Poco/DateTimeFormatter.h>
 #include <Poco/LocalDateTime.h>

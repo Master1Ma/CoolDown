@@ -57,7 +57,7 @@ namespace CoolDown{
             }
 
             CoolClient::CoolClient()
-            :jobThreads_("JobThreadPool"),
+            :jobThreads_(),
             uploadManager_(logger()){
             }
 
@@ -65,7 +65,8 @@ namespace CoolDown{
                 loadConfiguration();
                 ServerApplication::initialize(self);
 
-                setLogger(Logger::get("ConsoleLogger"));
+				Logger& logger_ = Logger::get("ConsoleLogger");
+                setLogger(logger_);
                 LOCAL_PORT = (unsigned short) config().getInt("client.message_port", 9025);
                 this->clientid_ = Verification::get_verification_code( Poco::Environment::nodeId() );
                 string default_history_file_path = format("%s%c%s", Path::current(), Path::separator(), string("history") );

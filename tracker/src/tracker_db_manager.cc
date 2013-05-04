@@ -22,7 +22,7 @@ TrackerDBManager::TrackerDBManager()
     clientInfoTableName_("CLIENTINFO"),
     fileOwnerTableName_("FILEOWNERINFO"){
 
-        Poco::Data::MySQL::Connector::registerConnector();
+        //Poco::Data::MySQL::Connector::registerConnector();
         retcode_t ret = this->init_tables();
         if( ret != ERROR_OK ){
             poco_error_f1(logger_, "in TrackerDBManager, Init tables error, retcode : %d.", ret);

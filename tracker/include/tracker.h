@@ -15,7 +15,6 @@
 #include "Poco/Util/OptionSet.h"
 #include "Poco/Util/HelpFormatter.h"
 #include "Poco/Data/Session.h"
-#include "Poco/Data/SQLite/Connector.h"
 #include <Poco/HashMap.h>
 #include <Poco/Mutex.h>
 #include <Poco/SharedPtr.h>
